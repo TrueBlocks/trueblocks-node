@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -24,13 +23,13 @@ func scraper(wg *sync.WaitGroup) {
 	for {
 		fmt.Println(colors.Green, "Scraper is running", colors.Off)
 		opts := sdk.ScrapeOptions{}
-		if blocks, meta, err := opts.ScrapeRunCount(1); err != nil {
+		if msg, meta, err := opts.ScrapeRunOnce(); err != nil {
 			fmt.Println("Error:", err)
 		} else {
-			fmt.Println("Blocks:", blocks)
+			fmt.Println("Message:", msg)
 			fmt.Println("Meta:", meta)
 		}
-		fmt.Println(os.Getpid())
-		time.Sleep(time.Second * 3)
+		// fmt.Println(os.Getpid())
+		time.Sleep(time.Millisecond * 3000)
 	}
 }
