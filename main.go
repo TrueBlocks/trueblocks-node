@@ -11,3 +11,5 @@ func main() {
 	go monitor(&wg)
 	wg.Wait()
 }
+
+var screenMutex sync.Mutex

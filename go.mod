@@ -2,23 +2,14 @@ module github.com/TrueBlocks/trueblocks-node
 
 go 1.22.0
 
-replace (
-	github.com/TrueBlocks/trueblocks-core/sdk/v3 => ../trueblocks-core/sdk
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../trueblocks-core/src/apps/chifra
-)
-
-require (
-	github.com/TrueBlocks/trueblocks-core/sdk/v3 v3.0.0-20240829133212-b9a248ff82f9
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20240829133212-b9a248ff82f9
-)
-
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/TrueBlocks/trueblocks-core/sdk/v3 v3.0.0-20240829133212-b9a248ff82f9 // indirect
+	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20240829133212-b9a248ff82f9 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
 	github.com/bykof/gostradamus v1.0.4 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect

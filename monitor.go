@@ -11,7 +11,9 @@ import (
 func monitor(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
-		fmt.Println(colors.Green, "Monitor is running", colors.Off)
-		time.Sleep(time.Second * 3)
+		screenMutex.Lock()
+		fmt.Println("\r"+colors.Green+"Monitor is running", colors.Off)
+		screenMutex.Unlock()
+		time.Sleep(time.Millisecond * 3000)
 	}
 }

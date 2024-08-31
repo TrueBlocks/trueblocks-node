@@ -20,18 +20,20 @@ type Config struct {
 func loadConfigFromEnv() Config {
 	var ok bool
 	var ret Config
-	if ret.DefaultChain, ok = os.LookupEnv("DEFAULT_CHAIN"); !ok {
-		panic("DEFAULT_CHAIN is required")
+	if ret.DefaultChain, ok = os.LookupEnv("TB_SETTINGS_DEFAULTCHAIN"); !ok {
+		ret.DefaultChain = "mainnet"
+		// panic("TB_SETTINGS_DEFAULTCHAIN is required in the environment")
 	}
-	if ret.IndexPath, ok = os.LookupEnv("INDEX_PATH"); !ok {
-		panic("INDEX_PATH is required")
+	if ret.IndexPath, ok = os.LookupEnv("TB_SETTINGS_INDEXPATH"); !ok {
+		panic("TB_SETTINGS_INDEXPATH is required in the environment")
 	}
-	if ret.CachePath, ok = os.LookupEnv("CACHE_PATH"); !ok {
-		panic("CACHE_PATH is required")
+	if ret.CachePath, ok = os.LookupEnv("TB_SETTINGS_CACHEPATH"); !ok {
+		panic("TB_SETTINGS_CACHEPATH is required in the environment")
 	}
-	if ret.RpcMainnet, ok = os.LookupEnv("RPC_MAINNET"); !ok {
-		panic("RPC_MAINNET is required")
+	if ret.RpcMainnet, ok = os.LookupEnv("TB_CHAINS_MAINNET_RPCPROVIDER"); !ok {
+		panic("TB_CHAINS_MAINNET_RPCPROVIDER is required in the environment")
 	}
+
 	return ret
 }
 
@@ -46,7 +48,8 @@ func establishConfig() {
 
 		configFilename := filepath.Join(configPath, "trueBlocks.toml")
 		if FileExists(configFilename) {
-			logger.Info("Config file already exists. Skipping creation.")
+			logger.Info("Config file already exists. Using existing config.")
+			return
 		}
 
 		t, err := template.New("personTemplate").Parse(configTmpl)
