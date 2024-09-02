@@ -8,7 +8,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go scraper(&wg)
-	go monitor(&wg)
+	// go monitor(&wg)
 	wg.Wait()
 }
 

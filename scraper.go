@@ -1,29 +1,32 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
+	"text/template"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/sdk/v3"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
 func scraper(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	opts := sdk.InitOptions{}
-	if _, _, err := opts.InitAll(); err != nil { // blooms only, if that fails
-		if _, _, err := opts.InitAll(); err != nil { // try --all
-			logger.Error(err)
-			return
-		}
+	if _, _, err := opts.Init(); err != nil { // blooms only, if that fails
+		// if _, _, err := opts.InitAll(); err != nil { // try --all
+		logger.Error(err)
+		return
+		// }
 	}
 
 	cwd, _ := os.Getwd()
@@ -31,7 +34,7 @@ func scraper(wg *sync.WaitGroup) {
 
 	for {
 		screenMutex.Lock()
-		fmt.Print(colors.Green, "Scraper is running...", colors.Off)
+		fmt.Print(colors.Green, "Scraping...", colors.Off)
 		quit := false
 		go func() {
 			for {
@@ -65,11 +68,51 @@ func scrapeOnce(dataFilename string, wg *sync.WaitGroup) {
 	}
 	w := logger.GetLoggerWriter()
 	logger.SetLoggerWriter(io.Discard)
-	if _, meta, err := opts.ScrapeRunCount(1); err != nil {
+	if _, meta, err := opts.ScrapeRunOnce(); err != nil {
 		logger.Error(err)
 	} else {
-		fmt.Println(strings.ReplaceAll(strings.ReplaceAll(meta.String(), "\n", ""), " ", ""))
-		file.StringToAsciiFile(dataFilename, meta.String())
+		tmpl := `Head (H): {{.Head}}
+Unripe:    H - {{.Unripe}}
+Staged:    H - {{.Staged}}
+Finalized: H - {{.Finalized}}
+{{.Time}}
+`
+
+		t, err := template.New("myTemplate").Parse(tmpl)
+		if err != nil {
+			panic(err)
+		}
+		var buf bytes.Buffer
+		report := NewReportFromMeta(meta)
+		err = t.Execute(&buf, report)
+		if err != nil {
+			panic(err)
+		}
+		// fmt.Println("\n" + buf.String())
+		file.StringToAsciiFile(dataFilename, buf.String())
 	}
 	logger.SetLoggerWriter(w)
+}
+
+type Report struct {
+	Head      int    `json:"head"`
+	Unripe    int    `json:"unripe"`
+	Staged    int    `json:"staged"`
+	Finalized int    `json:"finalized"`
+	Time      string `json:"time"`
+}
+
+func (r *Report) String() string {
+	bytes, _ := json.Marshal(r)
+	return string(bytes)
+}
+
+func NewReportFromMeta(meta *types.MetaData) *Report {
+	return &Report{
+		Head:      int(meta.Latest),
+		Unripe:    int(meta.Latest) - int(meta.Unripe),
+		Staged:    int(meta.Latest) - int(meta.Staging),
+		Finalized: int(meta.Latest) - int(meta.Finalized),
+		Time:      time.Now().Format("01-02 15:04:05"),
+	}
 }
