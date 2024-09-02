@@ -15,6 +15,7 @@ type Config struct {
 	IndexPath    string `json:"indexPath"`
 	CachePath    string `json:"cachePath"`
 	RpcMainnet   string `json:"rpcMainnet"`
+	OutputPath   string `json:"outputPath"`
 }
 
 func loadConfigFromEnv() Config {
@@ -33,40 +34,46 @@ func loadConfigFromEnv() Config {
 	if ret.RpcMainnet, ok = os.LookupEnv("TB_CHAINS_MAINNET_RPCPROVIDER"); !ok {
 		panic("TB_CHAINS_MAINNET_RPCPROVIDER is required in the environment")
 	}
+	if ret.OutputPath, ok = os.LookupEnv("TB_CHAINS_MAINNET_SCRAPEROUTPUT"); !ok {
+		ret.OutputPath, _ = os.Getwd()
+		// panic("TB_CHAINS_MAINNET_SCRAPEROUTPUT is required in the environment")
+	}
 
 	return ret
 }
 
-func establishConfig() {
+func establishConfig() (*Config, error) {
 	if homeDir, err := os.UserHomeDir(); err != nil {
-		panic(err)
+		return nil, err
+
 	} else {
 		configPath := filepath.Join(homeDir, "Library/Application Support/TrueBlocks")
 		if err := EstablishFolder((configPath)); err != nil {
-			panic(err)
-		}
-
-		configFilename := filepath.Join(configPath, "trueBlocks.toml")
-		if FileExists(configFilename) {
-			logger.Info("Config file already exists. Using existing config.")
-			return
-		}
-
-		t, err := template.New("personTemplate").Parse(configTmpl)
-		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		config := loadConfigFromEnv()
 
+		configFilename := filepath.Join(configPath, "trueBlocks.toml")
+		if FileExists(configFilename) {
+			logger.Info("Config file already exists. Using existing config.")
+			return &config, nil
+		}
+
+		t, err := template.New("theTemplate").Parse(configTmpl)
+		if err != nil {
+			return &config, err
+		}
+
 		var buf bytes.Buffer
 		err = t.Execute(&buf, config)
 		if err != nil {
-			panic(err)
+			return &config, err
 		}
 
 		file.StringToAsciiFile(configFilename, buf.String())
 		logger.Info("Created config file at: ", configFilename)
+		return &config, err
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sync"
 	"text/template"
@@ -18,7 +17,7 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-func scraper(wg *sync.WaitGroup) {
+func scraper(config *Config, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	opts := sdk.InitOptions{}
@@ -29,9 +28,7 @@ func scraper(wg *sync.WaitGroup) {
 		// }
 	}
 
-	cwd, _ := os.Getwd()
-	dataFilename := filepath.Join(cwd, "meta.json")
-
+	dataFilename := filepath.Join(config.OutputPath, "meta.json")
 	for {
 		screenMutex.Lock()
 		fmt.Print(colors.Green, "Scraping...", colors.Off)
@@ -45,10 +42,10 @@ func scraper(wg *sync.WaitGroup) {
 				fmt.Print(".")
 			}
 		}()
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go scrapeOnce(dataFilename, &wg)
-		wg.Wait()
+		wwg := sync.WaitGroup{}
+		wwg.Add(1)
+		go scrapeOnce(dataFilename, &wwg)
+		wwg.Wait()
 		quit = true
 		fmt.Println(colors.Green, "Done.", colors.Off)
 		time.Sleep(time.Millisecond * 1000)
@@ -58,16 +55,19 @@ func scraper(wg *sync.WaitGroup) {
 	}
 }
 
-func scrapeOnce(dataFilename string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func scrapeOnce(dataFilename string, wwg *sync.WaitGroup) {
+	defer wwg.Done()
+
 	opts := sdk.ScrapeOptions{
 		BlockCnt: 500,
 		Globals: sdk.Globals{
 			Chain: "mainnet",
 		},
 	}
+
 	w := logger.GetLoggerWriter()
 	logger.SetLoggerWriter(io.Discard)
+
 	if _, meta, err := opts.ScrapeRunOnce(); err != nil {
 		logger.Error(err)
 	} else {
@@ -91,6 +91,7 @@ Finalized: H - {{.Finalized}}
 		// fmt.Println("\n" + buf.String())
 		file.StringToAsciiFile(dataFilename, buf.String())
 	}
+
 	logger.SetLoggerWriter(w)
 }
 
