@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -16,6 +17,11 @@ type Config struct {
 	CachePath    string `json:"cachePath"`
 	RpcMainnet   string `json:"rpcMainnet"`
 	OutputPath   string `json:"outputPath"`
+}
+
+func (c *Config) String() string {
+	bytes, _ := json.Marshal(c)
+	return string(bytes)
 }
 
 func loadConfigFromEnv() Config {

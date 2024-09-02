@@ -28,7 +28,9 @@ func scraper(config *Config, wg *sync.WaitGroup) {
 		// }
 	}
 
-	dataFilename := filepath.Join(config.OutputPath, "meta.json")
+	dataFilename := filepath.Join(config.OutputPath, "scraper.report")
+	// logger.Info("Scraping...", config.String(), dataFilename)
+
 	for {
 		screenMutex.Lock()
 		fmt.Print(colors.Green, "Scraping...", colors.Off)

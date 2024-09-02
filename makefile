@@ -4,7 +4,8 @@ build:
 run:
 	@make build
 	@rm -f ~/Library/Application\ Support/TrueBlocks/trueBlocks.toml
-	@TB_SETTINGS_CACHEPATH="/Users/jrush/Data/buidlguidl/ethereum_clients/trueBlocks/database/cache" \
+	@TB_CHAINS_MAINNET_SCRAPEROUTPUT=/Users/jrush/Development/trueblocks-core/node/shit \
+		TB_SETTINGS_CACHEPATH="/Users/jrush/Data/buidlguidl/ethereum_clients/trueBlocks/database/cache" \
 		TB_SETTINGS_INDEXPATH="/Users/jrush/Data/buidlguidl/ethereum_clients/trueBlocks/database/unchained" \
 		TB_CHAINS_MAINNET_RPCPROVIDER="http://localhost:23456" \
 		./trueblocks-node
@@ -12,7 +13,8 @@ run:
 run-full:
 	@make build
 	@rm -f ~/Library/Application\ Support/TrueBlocks/trueBlocks.toml
-	@TB_SETTINGS_CACHEPATH="/Users/jrush/Data/trueblocks/v1.0.0/cache/" \
+	@TB_CHAINS_MAINNET_SCRAPEROUTPUT=/Users/jrush/Development/trueblocks-core/node/shit \
+		TB_SETTINGS_CACHEPATH="/Users/jrush/Data/trueblocks/v1.0.0/cache/" \
 		TB_SETTINGS_INDEXPATH="/Users/jrush/Data/trueblocks/v1.0.0/unchained" \
 		TB_CHAINS_MAINNET_RPCPROVIDER="http://localhost:23456" \
 		./trueblocks-node
