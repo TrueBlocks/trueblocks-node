@@ -17,7 +17,7 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-func scraper(config *Config, wg *sync.WaitGroup) {
+func (a *App) scraper(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	opts := sdk.InitOptions{}
@@ -28,7 +28,7 @@ func scraper(config *Config, wg *sync.WaitGroup) {
 		// }
 	}
 
-	dataFilename := filepath.Join(config.OutputPath, "scraper.report")
+	dataFilename := filepath.Join(a.Config.OutputPath, "scraper.report")
 	// logger.Info("Scraping...", config.String(), dataFilename)
 
 	for {
