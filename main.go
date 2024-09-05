@@ -2,22 +2,23 @@ package main
 
 import (
 	"sync"
-
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 func main() {
-	establishConfig()
-
-	if err := startApiServer(); err != nil {
-		logger.Fatal(err)
+	if a, err := NewApp(); err != nil {
+		a.Logger.Error(err.Error())
+		return
+	} else {
+		if cont := a.ParseArgs(); !cont {
+			return
+		}
+		wg := sync.WaitGroup{}
+		wg.Add(3)
+		go a.serve(&wg)
+		go a.scrape(&wg)
+		go a.monitor(&wg)
+		wg.Wait()
 	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go scraper(&wg)
-	go monitor(&wg)
-	wg.Wait()
 }
 
 var screenMutex sync.Mutex
