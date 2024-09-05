@@ -1,5 +1,5 @@
 build:
-	@rm -f node ; go build -o node *.go ; ls -l
+	@rm -f *node ; go build -o trueblocks-node *.go ; ls -l
 
 run:
 	@make build
