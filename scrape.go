@@ -17,23 +17,43 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-func (a *App) scraper(wg *sync.WaitGroup) {
+func (a *App) scrape(wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	a.Busy = true
+	go func() {
+		opts := sdk.StatusOptions{
+			Globals: sdk.Globals{
+				Chain: a.Config.DefaultChain,
+			},
+		}
+		if status, _, err := opts.Status(); err != nil {
+			a.Logger.Error("", "error:", err)
+			return
+		} else {
+			for a.Busy {
+				a.Logger.Info(fmt.Sprintf("%sSyncing unchained index for %s: %s\r%s", colors.Green, a.Config.DefaultChain, status[0].Diffs.String(), colors.Off))
+				time.Sleep(time.Millisecond * 1000)
+			}
+		}
+	}()
 
 	opts := sdk.InitOptions{}
 	if _, _, err := opts.Init(); err != nil { // blooms only, if that fails
-		// if _, _, err := opts.InitAll(); err != nil { // try --all
-		logger.Error(err)
-		return
-		// }
+		if _, _, err := opts.InitAll(); err != nil { // try --all
+			logger.Error(err)
+			return
+		}
 	}
+	a.Busy = false
 
-	dataFilename := filepath.Join(a.Config.OutputPath, "scraper.report")
-	// logger.Info("Scraping...", config.String(), dataFilename)
+	dataFilename := filepath.Join(a.Config.ConfigFolder, "scraper.report")
+	a.Logger.Info("Scraping...", "fn", dataFilename, "config", a.Config.String())
 
 	for {
-		screenMutex.Lock()
+		a.Busy = true
 		fmt.Print(colors.Green, "Scraping...", colors.Off)
+		a.Busy = false
 		quit := false
 		go func() {
 			for {
@@ -52,7 +72,6 @@ func (a *App) scraper(wg *sync.WaitGroup) {
 		fmt.Println(colors.Green, "Done.", colors.Off)
 		time.Sleep(time.Millisecond * 1000)
 		fmt.Print("\r \r")
-		screenMutex.Unlock()
 		time.Sleep(time.Millisecond * 4000)
 	}
 }

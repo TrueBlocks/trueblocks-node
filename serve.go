@@ -11,6 +11,13 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
+func (a *App) serve() {
+	ready := make(chan bool)
+	go sdk.NewDaemon(getApiUrl()).Start(ready)
+	<-ready
+	logger.Info(colors.Yellow + "API server started..." + colors.Off)
+}
+
 var apiPort = ""
 
 func getApiUrl() string {
@@ -25,18 +32,19 @@ func getApiUrl() string {
 	return "localhost:" + apiPort
 }
 
-func startApiServer() error {
-	ready := make(chan bool)
-	go sdk.NewDaemon(getApiUrl()).Start(ready)
-	<-ready
-	logger.Info(colors.Yellow + "Server started..." + colors.Off)
-	return nil
-}
-
 func findAvailablePort() int {
+	preferredPorts := []int{8080, 8088, 9090, 9099}
+	for _, port := range preferredPorts {
+		address := fmt.Sprintf(":%d", port)
+		listener, err := net.Listen("tcp", address)
+		if err == nil {
+			defer listener.Close()
+			return port
+		}
+	}
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		return 8080
+		return 0
 	}
 	defer listener.Close()
 	addr := listener.Addr().(*net.TCPAddr)

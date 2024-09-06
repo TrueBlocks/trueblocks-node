@@ -3,20 +3,20 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 type Config struct {
-	DefaultChain string `json:"defaultChain"`
-	IndexPath    string `json:"indexPath"`
-	CachePath    string `json:"cachePath"`
-	RpcMainnet   string `json:"rpcMainnet"`
-	OutputPath   string `json:"outputPath"`
+	ConfigFolder    string `json:"configFolder"`
+	DefaultChain    string `json:"defaultChain"`
+	MainnetProvider string `json:"mainnetProvider"`
+	ChainProvider   string `json:"chainProvider"`
 }
 
 func (c *Config) String() string {
@@ -24,67 +24,96 @@ func (c *Config) String() string {
 	return string(bytes)
 }
 
-func loadConfigFromEnv() Config {
-	var ok bool
-	var ret Config
-	if ret.DefaultChain, ok = os.LookupEnv("TB_SETTINGS_DEFAULTCHAIN"); !ok {
-		ret.DefaultChain = "mainnet"
-		// panic("TB_SETTINGS_DEFAULTCHAIN is required in the environment")
-	}
-	if ret.IndexPath, ok = os.LookupEnv("TB_SETTINGS_INDEXPATH"); !ok {
-		panic("TB_SETTINGS_INDEXPATH is required in the environment")
-	}
-	if ret.CachePath, ok = os.LookupEnv("TB_SETTINGS_CACHEPATH"); !ok {
-		panic("TB_SETTINGS_CACHEPATH is required in the environment")
-	}
-	if ret.RpcMainnet, ok = os.LookupEnv("TB_CHAINS_MAINNET_RPCPROVIDER"); !ok {
-		panic("TB_CHAINS_MAINNET_RPCPROVIDER is required in the environment")
-	}
-	if ret.OutputPath, ok = os.LookupEnv("TB_CHAINS_MAINNET_SCRAPEROUTPUT"); !ok {
-		ret.OutputPath, _ = os.Getwd()
-		// panic("TB_CHAINS_MAINNET_SCRAPEROUTPUT is required in the environment")
-	}
-
-	return ret
+func (c *Config) CachePath() string {
+	return filepath.Join(c.ConfigFolder, "cache")
 }
 
-func establishConfig() (*Config, error) {
-	if homeDir, err := os.UserHomeDir(); err != nil {
-		return nil, err
+func (c *Config) IndexPath() string {
+	return filepath.Join(c.ConfigFolder, "unchained")
+}
 
-	} else {
-		configPath := filepath.Join(homeDir, "Library/Application Support/TrueBlocks")
-		if err := EstablishFolder((configPath)); err != nil {
-			return nil, err
-		}
+func (c *Config) IsMainnet() bool {
+	return c.DefaultChain == "mainnet"
+}
 
-		config := loadConfigFromEnv()
+/*
+TB_NODE_MAINNETRPC: A valid RPC endpoint for Ethereum mainnet
+TB_NODE_CHAIN:    The name of the chain to index if not "mainnet"
+TB_NODE_CHAINRPC: An RPC endpoint running that chain's RPC endpoint
+*/
 
-		configFilename := filepath.Join(configPath, "trueBlocks.toml")
-		if FileExists(configFilename) {
-			logger.Info("Config file already exists. Using existing config.")
-			return &config, nil
-		}
-
-		t, err := template.New("theTemplate").Parse(configTmpl)
-		if err != nil {
-			return &config, err
-		}
-
-		var buf bytes.Buffer
-		err = t.Execute(&buf, config)
-		if err != nil {
-			return &config, err
-		}
-
-		file.StringToAsciiFile(configFilename, buf.String())
-		logger.Info("Created config file at: ", configFilename)
-		return &config, err
+func (a *App) establishConfig() error {
+	var ok bool
+	if a.Config.ConfigFolder, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
+		return errors.New("TB_NODE_DATADIR is required in the environment")
 	}
+	os.Setenv("XDG_CONFIG_HOME", a.Config.ConfigFolder)
+
+	if a.Config.MainnetProvider, ok = os.LookupEnv("TB_NODE_MAINNETRPC"); !ok {
+		return errors.New("TB_NODE_MAINNETRPC is required in the environment")
+	}
+
+	if a.Config.DefaultChain, ok = os.LookupEnv("TB_NODE_CHAIN"); !ok || a.Config.DefaultChain == "mainnet" {
+		a.Config.DefaultChain = "mainnet"
+		a.Config.ChainProvider = a.Config.MainnetProvider
+	} else {
+		if a.Config.ChainProvider, ok = os.LookupEnv("TB_NODE_CHAINRPC"); !ok {
+			return errors.New("if TB_NODE_CHAIN is not empty, TB_NODE_CHAINRPC is required in the environment")
+		}
+	}
+
+	// Set the environment trueblocks-core needs
+	chain := strings.ToUpper(a.Config.DefaultChain)
+	os.Setenv("TB_SETTINGS_DEFAULTCHAIN", a.Config.DefaultChain)
+	os.Setenv("TB_SETTINGS_INDEXPATH", a.Config.IndexPath())
+	os.Setenv("TB_SETTINGS_CACHEPATH", a.Config.CachePath())
+	os.Setenv("TB_CHAINS_MAINNET_RPCPROVIDER", a.Config.MainnetProvider)
+	if !a.Config.IsMainnet() {
+		os.Setenv("TB_CHAINS_"+chain+"_RPCPROVIDER", a.Config.ChainProvider)
+	}
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "TB_") {
+			a.Logger.Info("", "env", env)
+		}
+	}
+
+	if err := EstablishFolder(a.Config.ConfigFolder); err != nil {
+		return err
+	}
+	mainnetConfig := filepath.Join(a.Config.ConfigFolder, "config", "mainnet")
+	if err := EstablishFolder(mainnetConfig); err != nil {
+		return err
+	}
+	chainConfig := filepath.Join(a.Config.ConfigFolder, "config", a.Config.DefaultChain)
+	if err := EstablishFolder(chainConfig); err != nil {
+		return err
+	}
+
+	configFn := filepath.Join(a.Config.ConfigFolder, "trueBlocks.toml")
+	if FileExists(configFn) {
+		a.Logger.Info("Using existing config", "configFile", configFn)
+		return nil
+	}
+
+	tmpl, err := template.New("tmpl").Parse(configTmpl)
+	if err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, &a.Config)
+	if err != nil {
+		return err
+	}
+
+	file.StringToAsciiFile(configFn, buf.String())
+	a.Logger.Info("Created config file", "configFile", configFn, "config", a.Config.String())
+
+	return err
 }
 
 var configTmpl string = `[version]
-  current = "v3.1.3-release"
+  current = "v3.3.0-release"
 
 [settings]
   cachePath = "{{.CachePath}}"
@@ -100,31 +129,12 @@ var configTmpl string = `[version]
     chain = "mainnet"
     chainId = "1"
     remoteExplorer = "https://etherscan.io"
-    rpcProvider = "{{.RpcMainnet}}"
-    symbol = "ETH"
+    rpcProvider = "{{.MainnetProvider}}"
+    symbol = "ETH"{{if ne .DefaultChain "mainnet"}}
+  [chains.{{.DefaultChain}}]
+    chain = "{{.DefaultChain}}"
+    chainId = ""
+    remoteExplorer = ""
+    rpcProvider = "{{.ChainProvider}}"
+    symbol = ""{{end}}
 `
-
-// EstablishFolder creates folders given a list of folders
-func EstablishFolder(rootPath string) error {
-	_, err := os.Stat(rootPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(rootPath, 0755)
-			if err != nil {
-				return err
-			}
-		} else {
-			// If there's an error other than not exist...we fail
-			return err
-		}
-	}
-	return nil
-}
-
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
