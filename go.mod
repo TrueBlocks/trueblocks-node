@@ -4,7 +4,8 @@ go 1.22
 
 require (
 	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20240901212707-3b0228642466
-	github.com/TrueBlocks/trueblocks-sdk/v3 v3.3.1-0.20240901222858-35c88728ba2c
+	github.com/TrueBlocks/trueblocks-sdk/v3 v3.3.2
+	github.com/joho/godotenv v1.5.1
 )
 
 require (

@@ -10,9 +10,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/walk"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
@@ -44,46 +42,33 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 	a.Busy = false
 
 	dataFilename := filepath.Join(a.Config.ConfigPath, "scraper.report")
-	a.Logger.Info("Scraping...", "fn", dataFilename, "config", a.Config.String())
-
 	for {
-		a.Busy = true
-		fmt.Print(colors.Green, "Scraping...", colors.Off)
-		a.Busy = false
-		quit := false
-		go func() {
-			for {
-				if quit {
-					break
-				}
-				time.Sleep(time.Millisecond * 1000)
-				fmt.Print(".")
+		if report, err := a.scrapeOnce(dataFilename); err != nil {
+			a.Logger.Error("ScrapeRunOnce failed", "error", err)
+		} else {
+			msg := "Catching up..."
+			if report.Unripe < 5 {
+				msg = "Caught up"
 			}
-		}()
-		wwg := sync.WaitGroup{}
-		wwg.Add(1)
-		go a.scrapeOnce(dataFilename, &wwg)
-		wwg.Wait()
-		quit = true
-		fmt.Println(colors.Green, "Done.", colors.Off)
-		time.Sleep(time.Millisecond * 1000)
-		fmt.Print("\r \r")
-		time.Sleep(time.Millisecond * 4000)
+			a.Logger.Info(msg, "head", report.Head,
+				"unripe", -report.Unripe,
+				"staged", -report.Staged,
+				"index", -report.Finalized)
+		}
+		time.Sleep(time.Second * a.Sleep)
 	}
 }
 
-func (a *App) scrapeOnce(dataFilename string, wwg *sync.WaitGroup) {
-	defer wwg.Done()
-
+func (a *App) scrapeOnce(dataFilename string) (*Report, error) {
 	opts := sdk.ScrapeOptions{
-		BlockCnt: 100,
-		Globals: sdk.Globals{
-			Chain: a.Config.DefaultChain,
-		},
+		BlockCnt: 121,
+		// Globals: sdk.Globals{
+		// 	Chain: a.Config.DefaultChain,
+		// },
 	}
 
 	if _, meta, err := opts.ScrapeRunOnce(); err != nil {
-		logger.Error(err)
+		return nil, err
 	} else {
 		tmpl := `Head (H): {{.Head}}
 Unripe:    H - {{.Unripe}}
@@ -93,16 +78,16 @@ Finalized: H - {{.Finalized}}
 `
 		t, err := template.New("myTemplate").Parse(tmpl)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		var buf bytes.Buffer
 		report := NewReportFromMeta(meta)
 		err = t.Execute(&buf, report)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		// fmt.Println("\n" + buf.String())
 		file.StringToAsciiFile(dataFilename, buf.String())
+		return report, nil
 	}
 }
 

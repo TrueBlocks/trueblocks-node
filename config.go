@@ -3,9 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -13,10 +12,8 @@ import (
 )
 
 type Config struct {
-	ConfigPath      string `json:"configPath"`
-	DefaultChain    string `json:"defaultChain"`
-	MainnetProvider string `json:"mainnetProvider"`
-	ChainProvider   string `json:"chainProvider"`
+	ConfigPath  string            `json:"configPath"`
+	ProviderMap map[string]string `json:"providers"` // chain to provider
 }
 
 func (c *Config) String() string {
@@ -32,109 +29,83 @@ func (c *Config) IndexPath() string {
 	return filepath.Join(c.ConfigPath, "unchained")
 }
 
-func (c *Config) IsMainnet() bool {
-	return c.DefaultChain == "mainnet"
+type ChainConfig struct {
+	Chain          string `json:"chain"`
+	ChainId        string `json:"chainId"`
+	LocalExplorer  string `json:"localExplorer"`
+	RemoteExplorer string `json:"remoteExplorer"`
+	RpcProvider    string `json:"rpcProvider"`
+	Symbol         string `json:"symbol"`
 }
 
-/*
-TB_NODE_MAINNETRPC: A valid RPC endpoint for Ethereum mainnet
-TB_NODE_CHAIN:    The name of the chain to index if not "mainnet"
-TB_NODE_CHAINRPC: An RPC endpoint running that chain's RPC endpoint
-*/
-
-func (a *App) establishConfig() error {
-	var ok bool
-	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
-		return errors.New("TB_NODE_DATADIR is required in the environment")
+func (c *Config) ChainConfigs() string {
+	chainData := file.AsciiFileToString("chains.json")
+	if len(chainData) == 0 {
+		chainData = `{
+	"mainnet": {
+		"chain": "mainnet",
+		"chainId": "1",
+		"remoteExplorer": "https://etherscan.io",
+		"symbol": "ETH"
+	},
+	"sepolia": {
+		"chain": "sepolia",
+		"chainId": "11155111",
+		"remoteExplorer": "https://sepolia.otterscan.io/",
+		"symbol": "ETH"
+	},
+	"optimism": {
+		"chain": "optimism",
+		"chainId": "10",
+		"remoteExplorer": "https://optimistic.etherscan.io",
+		"symbol": "ETH"
+	},
+	"gnosis": {
+		"chain": "gnosis",
+		"chainId": "100",
+		"remoteExplorer": "https://gnosisscan.io/",
+		"symbol": "xDAI"
 	}
-	os.Setenv("XDG_CONFIG_HOME", a.Config.ConfigPath)
-
-	if a.Config.MainnetProvider, ok = os.LookupEnv("TB_NODE_MAINNETRPC"); !ok {
-		return errors.New("TB_NODE_MAINNETRPC is required in the environment")
+}`
 	}
 
-	if a.Config.DefaultChain, ok = os.LookupEnv("TB_NODE_CHAIN"); !ok || a.Config.DefaultChain == "mainnet" {
-		a.Config.DefaultChain = "mainnet"
-		a.Config.ChainProvider = a.Config.MainnetProvider
-	} else {
-		if a.Config.ChainProvider, ok = os.LookupEnv("TB_NODE_CHAINRPC"); !ok {
-			return errors.New("if TB_NODE_CHAIN is not empty, TB_NODE_CHAINRPC is required in the environment")
+	chains := make(map[string]ChainConfig)
+	if err := json.Unmarshal([]byte(chainData), &chains); err != nil {
+		return err.Error()
+	}
+
+	tmpl, err := template.New("chainConfigTmpl").Parse(chainConfigTmpl)
+	if err != nil {
+		return err.Error()
+	}
+
+	ret := []string{}
+	for chain, provider := range c.ProviderMap {
+		if chainConfig, ok := chains[chain]; ok {
+			chainConfig.RpcProvider = provider
+
+			var buf bytes.Buffer
+			if err = tmpl.Execute(&buf, &chainConfig); err != nil {
+				return err.Error()
+			}
+
+			ret = append(ret, buf.String())
+		} else {
+			ret = append(ret, "  # "+chain+" is not supported")
 		}
 	}
 
-	// Set the environment trueblocks-core needs
-	chain := strings.ToUpper(a.Config.DefaultChain)
-	os.Setenv("TB_SETTINGS_DEFAULTCHAIN", a.Config.DefaultChain)
-	os.Setenv("TB_SETTINGS_INDEXPATH", a.Config.IndexPath())
-	os.Setenv("TB_SETTINGS_CACHEPATH", a.Config.CachePath())
-	os.Setenv("TB_CHAINS_MAINNET_RPCPROVIDER", a.Config.MainnetProvider)
-	if !a.Config.IsMainnet() {
-		os.Setenv("TB_CHAINS_"+chain+"_RPCPROVIDER", a.Config.ChainProvider)
-	}
-	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "TB_") {
-			a.Logger.Info("", "env", env)
-		}
-	}
+	sort.Slice(ret, func(i, j int) bool {
+		return strings.Compare(ret[i], ret[j]) < 0
+	})
 
-	if err := EstablishFolder(a.Config.ConfigPath); err != nil {
-		return err
-	}
-	mainnetConfig := filepath.Join(a.Config.ConfigPath, "config", "mainnet")
-	if err := EstablishFolder(mainnetConfig); err != nil {
-		return err
-	}
-	chainConfig := filepath.Join(a.Config.ConfigPath, "config", a.Config.DefaultChain)
-	if err := EstablishFolder(chainConfig); err != nil {
-		return err
-	}
-
-	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
-	if FileExists(configFn) {
-		a.Logger.Info("Using existing config", "configFile", configFn)
-		return nil
-	}
-
-	tmpl, err := template.New("tmpl").Parse(configTmpl)
-	if err != nil {
-		return err
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, &a.Config)
-	if err != nil {
-		return err
-	}
-
-	file.StringToAsciiFile(configFn, buf.String())
-	a.Logger.Info("Created config file", "configFile", configFn, "config", a.Config.String())
-
-	return err
+	return "\n" + strings.Join(ret, "\n")
 }
 
-var configTmpl string = `[version]
-  current = "v3.3.0-release"
-
-[settings]
-  cachePath = "{{.CachePath}}"
-  defaultChain = "{{.DefaultChain}}"
-  indexPath = "{{.IndexPath}}"
-
-[keys]
-  [keys.etherscan]
-    apiKey = ""
-
-[chains]
-  [chains.mainnet]
-    chain = "mainnet"
-    chainId = "1"
-    remoteExplorer = "https://etherscan.io"
-    rpcProvider = "{{.MainnetProvider}}"
-    symbol = "ETH"{{if ne .DefaultChain "mainnet"}}
-  [chains.{{.DefaultChain}}]
-    chain = "{{.DefaultChain}}"
-    chainId = ""
-    remoteExplorer = ""
-    rpcProvider = "{{.ChainProvider}}"
-    symbol = ""{{end}}
-`
+var chainConfigTmpl = `  [chains.{{.Chain}}]
+    chain = "{{.Chain}}"
+    chainId = "{{.ChainId}}"
+    localExplorer = "{{.LocalExplorer}}"
+    remoteExplorer = "{{.RemoteExplorer}}"
+    rpcProvider = "{{.RpcProvider}}"
+    symbol = "{{.Symbol}}"`

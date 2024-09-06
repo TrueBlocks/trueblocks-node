@@ -9,10 +9,10 @@
             "type": "go",
             "request": "launch",
             "program": "${workspaceFolder}",
-            // "cwd": "/Users/jrush/Development/trueblocks-core/build/",
+            "cwd": "/Users/jrush/Development/trueblocks-node/",
             "args": [],
             "env": {
-                "TB_NODE_DATADIR": "/Users/jrush/Development/trueblocks-node/Data",
+                "TB_NODE_DATADIR": "PWD/data",
                 "TB_NODE_MAINNETRPC": "http://localhost:23456",
             }
         }
