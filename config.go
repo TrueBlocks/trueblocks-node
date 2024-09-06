@@ -13,7 +13,7 @@ import (
 )
 
 type Config struct {
-	ConfigFolder    string `json:"configFolder"`
+	ConfigPath      string `json:"configPath"`
 	DefaultChain    string `json:"defaultChain"`
 	MainnetProvider string `json:"mainnetProvider"`
 	ChainProvider   string `json:"chainProvider"`
@@ -25,11 +25,11 @@ func (c *Config) String() string {
 }
 
 func (c *Config) CachePath() string {
-	return filepath.Join(c.ConfigFolder, "cache")
+	return filepath.Join(c.ConfigPath, "cache")
 }
 
 func (c *Config) IndexPath() string {
-	return filepath.Join(c.ConfigFolder, "unchained")
+	return filepath.Join(c.ConfigPath, "unchained")
 }
 
 func (c *Config) IsMainnet() bool {
@@ -44,10 +44,10 @@ TB_NODE_CHAINRPC: An RPC endpoint running that chain's RPC endpoint
 
 func (a *App) establishConfig() error {
 	var ok bool
-	if a.Config.ConfigFolder, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
+	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
 		return errors.New("TB_NODE_DATADIR is required in the environment")
 	}
-	os.Setenv("XDG_CONFIG_HOME", a.Config.ConfigFolder)
+	os.Setenv("XDG_CONFIG_HOME", a.Config.ConfigPath)
 
 	if a.Config.MainnetProvider, ok = os.LookupEnv("TB_NODE_MAINNETRPC"); !ok {
 		return errors.New("TB_NODE_MAINNETRPC is required in the environment")
@@ -77,19 +77,19 @@ func (a *App) establishConfig() error {
 		}
 	}
 
-	if err := EstablishFolder(a.Config.ConfigFolder); err != nil {
+	if err := EstablishFolder(a.Config.ConfigPath); err != nil {
 		return err
 	}
-	mainnetConfig := filepath.Join(a.Config.ConfigFolder, "config", "mainnet")
+	mainnetConfig := filepath.Join(a.Config.ConfigPath, "config", "mainnet")
 	if err := EstablishFolder(mainnetConfig); err != nil {
 		return err
 	}
-	chainConfig := filepath.Join(a.Config.ConfigFolder, "config", a.Config.DefaultChain)
+	chainConfig := filepath.Join(a.Config.ConfigPath, "config", a.Config.DefaultChain)
 	if err := EstablishFolder(chainConfig); err != nil {
 		return err
 	}
 
-	configFn := filepath.Join(a.Config.ConfigFolder, "trueBlocks.toml")
+	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
 	if FileExists(configFn) {
 		a.Logger.Info("Using existing config", "configFile", configFn)
 		return nil

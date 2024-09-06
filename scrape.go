@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
+	"os"
 	"path/filepath"
 	"sync"
 	"text/template"
@@ -14,6 +14,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/walk"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
@@ -22,32 +23,27 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 
 	a.Busy = true
 	go func() {
-		opts := sdk.StatusOptions{
-			Globals: sdk.Globals{
-				Chain: a.Config.DefaultChain,
-			},
-		}
-		if status, _, err := opts.Status(); err != nil {
-			a.Logger.Error("", "error:", err)
-			return
-		} else {
-			for a.Busy {
-				a.Logger.Info(fmt.Sprintf("%sSyncing unchained index for %s: %s\r%s", colors.Green, a.Config.DefaultChain, status[0].Diffs.String(), colors.Off))
-				time.Sleep(time.Millisecond * 1000)
-			}
+		for a.Busy {
+			cnt := 0
+			walk.ForEveryFileInFolder(a.Config.IndexPath(), func(path string, vP any) (bool, error) {
+				cnt++
+				return true, nil
+			}, nil)
+			fmt.Fprintf(os.Stderr, "Synced % 5d files\r", cnt)
+			time.Sleep(time.Millisecond * 3000)
 		}
 	}()
 
 	opts := sdk.InitOptions{}
 	if _, _, err := opts.Init(); err != nil { // blooms only, if that fails
 		if _, _, err := opts.InitAll(); err != nil { // try --all
-			logger.Error(err)
+			a.Logger.Error("", "error", err)
 			return
 		}
 	}
 	a.Busy = false
 
-	dataFilename := filepath.Join(a.Config.ConfigFolder, "scraper.report")
+	dataFilename := filepath.Join(a.Config.ConfigPath, "scraper.report")
 	a.Logger.Info("Scraping...", "fn", dataFilename, "config", a.Config.String())
 
 	for {
@@ -66,7 +62,7 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 		}()
 		wwg := sync.WaitGroup{}
 		wwg.Add(1)
-		go scrapeOnce(dataFilename, &wwg)
+		go a.scrapeOnce(dataFilename, &wwg)
 		wwg.Wait()
 		quit = true
 		fmt.Println(colors.Green, "Done.", colors.Off)
@@ -76,18 +72,15 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 	}
 }
 
-func scrapeOnce(dataFilename string, wwg *sync.WaitGroup) {
+func (a *App) scrapeOnce(dataFilename string, wwg *sync.WaitGroup) {
 	defer wwg.Done()
 
 	opts := sdk.ScrapeOptions{
-		BlockCnt: 500,
+		BlockCnt: 100,
 		Globals: sdk.Globals{
-			Chain: "mainnet",
+			Chain: a.Config.DefaultChain,
 		},
 	}
-
-	w := logger.GetLoggerWriter()
-	logger.SetLoggerWriter(io.Discard)
 
 	if _, meta, err := opts.ScrapeRunOnce(); err != nil {
 		logger.Error(err)
@@ -98,7 +91,6 @@ Staged:    H - {{.Staged}}
 Finalized: H - {{.Finalized}}
 {{.Time}}
 `
-
 		t, err := template.New("myTemplate").Parse(tmpl)
 		if err != nil {
 			panic(err)
@@ -112,8 +104,6 @@ Finalized: H - {{.Finalized}}
 		// fmt.Println("\n" + buf.String())
 		file.StringToAsciiFile(dataFilename, buf.String())
 	}
-
-	logger.SetLoggerWriter(w)
 }
 
 type Report struct {
