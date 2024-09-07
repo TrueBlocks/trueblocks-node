@@ -4,46 +4,110 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
 // parseArgs makes sure there are no command line arguments (other than --version or --help)
-func (a *App) parseArgs() bool {
+func (a *App) parseArgs() (bool, error) {
 	if len(os.Args) < 2 {
-		return true
+		return true, nil
 	}
 
-	for _, arg := range os.Args[1:] {
-		if arg == "--monitor" {
-			a.Monitor = "on"
-			return true
-		} else {
-			if arg == "--version" {
-				fmt.Println("trueblocks-node " + sdk.Version())
-				return false
+	hasValue := func(i int) bool {
+		return i+1 < len(os.Args) && os.Args[i+1][0] != '-'
+	}
+
+	validateMode := func(value string) (InitMode, error) {
+		mode := InitMode(value)
+		switch mode {
+		case All, Blooms, None:
+			return mode, nil
+		}
+		return mode, fmt.Errorf("invalid value: " + value)
+	}
+
+	validateOnOff := func(value string) (OnOff, error) {
+		mode := OnOff(value)
+		switch mode {
+		case On, Off:
+			return mode, nil
+		}
+		return mode, fmt.Errorf("invalid value: " + value)
+	}
+
+	validateSleep := func(value string) (int, error) {
+		sleep := 1
+		if _, err := fmt.Sscanf(value, "%d", &sleep); err != nil || sleep < 1 {
+			return 1, fmt.Errorf("invalid value for --sleep: " + value)
+		}
+		return sleep, nil
+	}
+
+	var err error
+	for i := 1; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		switch arg {
+		case "--init":
+			if !hasValue(i) {
+				return true, fmt.Errorf("missing argument for --init")
 			} else {
-				if arg != "--help" {
-					fmt.Println(colors.Red+"Unknown option:", os.Args[1]+"\n", colors.Off)
+				if a.InitMode, err = validateMode(os.Args[i+1]); err != nil {
+					return true, err
 				}
-				fmt.Println(helpText)
-				return false
+				i++
 			}
+		case "--api":
+			if !hasValue(i) {
+				return true, fmt.Errorf("missing argument for --init")
+			} else {
+				if a.Api, err = validateOnOff(os.Args[i+1]); err != nil {
+					return true, err
+				}
+				i++
+			}
+		case "--monitor":
+			if !hasValue(i) {
+				return true, fmt.Errorf("missing argument for --monitor")
+			} else {
+				if a.Monitor, err = validateOnOff(os.Args[i+1]); err != nil {
+					return true, err
+				}
+				i++
+			}
+		case "--sleep":
+			if !hasValue(i) {
+				return true, fmt.Errorf("missing argument for --sleep")
+			} else {
+				if a.Sleep, err = validateSleep(os.Args[i+1]); err != nil {
+					return true, err
+				}
+				i++
+			}
+		case "--version":
+			fmt.Println("trueblocks-node " + sdk.Version())
+			return false, nil
+		default:
+			if arg != "--help" {
+				err = fmt.Errorf("%s%s", "unknown option:"+os.Args[1]+"\n", helpText)
+			} else {
+				err = fmt.Errorf("%s", helpText)
+			}
+			return true, err
 		}
 	}
-	return false
+	return true, nil
 }
 
 const helpText = `Usage: trueblocks-node <options>
 
 Options:
 ---------
- --sync [all*|blooms]: sync to unchained index with blooms only or full index (default: all)
- --api [on*|off]:      enable/disable API server (default: on)
- --monitor [on|off*]:  enable/disable address monitoring (default: off)
- --sleep int:          the number of seconds to sleep between updates (default: 30)
- --version:            display the version string
- --help:               display this help text
+ --init [all*|blooms|none]: download from the unchained index smart contract (default: all)
+ --api [on*|off]:           enable/disable API server (default: on)
+ --monitor [on|off*]:       enable/disable address monitoring (currently disabled, default: off)
+ --sleep int:               the number of seconds to sleep between updates (default: 30)
+ --version:                 display the version string
+ --help:                    display this help text
 
 Environment:
 -------------

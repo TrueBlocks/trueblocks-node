@@ -1,6 +1,11 @@
 package main
 
-import "os"
+import (
+	"bytes"
+	"fmt"
+	"net/http"
+	"os"
+)
 
 // EstablishFolder creates folders given a list of folders
 func EstablishFolder(rootPath string) error {
@@ -25,4 +30,26 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func PingRpc(providerUrl string) error {
+	jsonData := []byte(`{ "jsonrpc": "2.0", "method": "web3_clientVersion", "id": 6 }`)
+	req, err := http.NewRequest("POST", providerUrl, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	clientHTTP := &http.Client{}
+	resp, err := clientHTTP.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
 }

@@ -1,13 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"sync"
 )
 
 func main() {
 	a := NewApp()
-	if ok := a.parseArgs(); !ok {
+	if cont, err := a.parseArgs(); !cont {
+		return // don't continue
+	} else if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 
@@ -16,21 +20,26 @@ func main() {
 		a.Logger.Error(err.Error())
 
 	} else {
-		os.Exit(0)
+		a.Logger.Info("Starting trueBlocks-node with...", "api", a.IsOn(Api), "scrape", a.IsOn(Scrape), "monitor", a.IsOn(Monitor))
 
-		// Start the API server. Don't wait for it to return, it never does.
-		if a.Api.IsOn() {
+		// Start the API server. It runs in its own goroutine.
+		if a.IsOn(Api) {
 			a.serve()
 		}
 
 		// Start forever loop to scrape and (optionally) monitor the chain
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go a.scrape(&wg)
-		if a.Monitor.IsOn() {
+
+		if a.IsOn(Scrape) {
+			wg.Add(1)
+			go a.scrape(&wg)
+		}
+
+		if a.IsOn(Monitor) {
 			wg.Add(1)
 			go a.monitor(&wg)
 		}
+
 		wg.Wait()
 	}
 }

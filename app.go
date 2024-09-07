@@ -4,16 +4,25 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-type SyncType string
+type Feature string
 
 const (
-	All    SyncType = "all"
-	Blooms SyncType = "blooms"
+	Scrape  Feature = "scrape"
+	Monitor Feature = "monitor"
+	Api     Feature = "api"
+)
+
+type InitMode string
+
+const (
+	All    InitMode = "all"
+	Blooms InitMode = "blooms"
+	None   InitMode = "none"
 )
 
 type OnOff string
@@ -23,24 +32,33 @@ const (
 	Off OnOff = "off"
 )
 
-func (o OnOff) IsOn() bool {
-	return o == On
-}
-
 type App struct {
-	Logger  *slog.Logger
-	Config  Config
-	Mode    SyncType
-	Monitor OnOff
-	Api     OnOff
-	Sleep   time.Duration
-	Busy    bool
+	Logger   *slog.Logger
+	Config   Config
+	InitMode InitMode
+	Monitor  OnOff
+	Api      OnOff
+	Sleep    int
+	Busy     bool
 }
 
 func NewApp() *App {
 	logger.SetLoggerWriter(io.Discard) // we never want core to log anything
+	logLevel := slog.LevelInfo
+	if ll, ok := os.LookupEnv("TB_NODE_LOGLEVEL"); ok {
+		switch strings.ToLower(ll) {
+		case "debug":
+			logLevel = slog.LevelDebug
+		case "info":
+			logLevel = slog.LevelInfo
+		case "warn":
+			logLevel = slog.LevelWarn
+		case "error":
+			logLevel = slog.LevelError
+		}
+	}
 	opts := slog.HandlerOptions{
-		Level: slog.LevelDebug, // Set the minimum log level
+		Level: logLevel,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.TimeKey {
 				a.Value = slog.StringValue(a.Value.Time().Format("15:04:05"))
@@ -49,11 +67,29 @@ func NewApp() *App {
 		},
 	}
 
-	return &App{
+	app := &App{
 		Logger: slog.New(slog.NewTextHandler(os.Stderr, &opts)),
 		Sleep:  4,
 		Config: Config{
 			ProviderMap: make(map[string]string),
 		},
+		Api:      On,
+		Monitor:  Off,
+		InitMode: Blooms,
 	}
+	// app.Logger.Info("Starting", "logLevel", logLevel)
+
+	return app
+}
+
+func (a *App) IsOn(feature Feature) bool {
+	switch feature {
+	case Scrape:
+		return a.InitMode == All || a.InitMode == Blooms
+	case Monitor:
+		return a.Monitor == On
+	case Api:
+		return a.Api == On
+	}
+	return false
 }

@@ -1,4 +1,4 @@
-build:
+build: *.go
 	@rm -f *node ; go build -o trueblocks-node *.go
 
 
@@ -7,8 +7,12 @@ clean:
 
 run:
 	@make build
-	@./trueblocks-node
+	@./trueblocks-node --init
 
 install:
 	@make build
 	@mv trueblocks-node ~/go/bin
+
+test:
+	@go test ./...
+

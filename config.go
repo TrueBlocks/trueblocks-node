@@ -14,6 +14,7 @@ import (
 type Config struct {
 	ConfigPath  string            `json:"configPath"`
 	ProviderMap map[string]string `json:"providers"` // chain to provider
+	Targets     []string          `json:"targets"`
 }
 
 func (c *Config) String() string {
