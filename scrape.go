@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -14,64 +15,59 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-func (a *App) scrape(wg *sync.WaitGroup) {
+// RunScraper runs the scraper in a goroutine. It will scrape the chains in the configuration
+// file and sleep for the duration specified in the configuration file.
+func (a *App) RunScraper(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	if a.InitMode == None {
-		return
-	}
+	if a.InitMode != None {
+		a.Logger.Debug("Entering init mode", "mode", a.InitMode)
+		for _, chain := range a.Config.Targets {
+			a.Logger.Debug("For chain", "chain", chain)
+			opts := sdk.InitOptions{
+				Globals: sdk.Globals{
+					Chain: chain,
+				},
+			}
 
-	for _, chain := range a.Config.Targets {
-		opts := sdk.InitOptions{
-			Globals: sdk.Globals{
-				Chain: chain,
-			},
-		}
+			originalHandler := a.Logger.Handler()
+			a.Logger = slog.New(slog.NewTextHandler(nil, nil))
+			logger.SetLoggerWriter(os.Stderr)
+			var err error
+			if a.InitMode == All {
+				_, _, err = opts.InitAll()
+			} else if a.InitMode == Blooms {
+				_, _, err = opts.Init()
+			}
+			logger.SetLoggerWriter(io.Discard)
+			a.Logger = slog.New(originalHandler)
 
-		// a.Busy = true
-		// go func() {
-		// 	for a.Busy {
-		// 		cnt := 0
-		// 		path := filepath.Join(a.Config.IndexPath(), chain)
-		// 		walk.ForEveryFileInFolder(path, func(path string, vP any) (bool, error) {
-		// 			cnt++
-		// 			return true, nil
-		// 		}, nil)
-		// 		fmt.Fprintf(os.Stderr, "Initializing %s: downloaded % 5d files\r", chain, cnt)
-		// 		time.Sleep(2 * time.Second) // reporting speed
-		// 	}
-		// }()
-
-		a.Busy = true
-		logger.SetLoggerWriter(os.Stderr)
-		var err error
-		if a.InitMode == All {
-			_, _, err = opts.InitAll()
-		} else if a.InitMode == Blooms {
-			_, _, err = opts.Init()
-		}
-		logger.SetLoggerWriter(io.Discard)
-		a.Busy = false
-
-		if err != nil {
-			a.Logger.Error("", "error", err)
-			if !strings.HasPrefix(err.Error(), "no record found in the Unchained Index") {
-				return
-			} else {
-				a.Logger.Warn("No record found in the Unchained Index for chain", "chain", chain)
+			if err != nil {
+				a.Logger.Error("", "error", err)
+				if !strings.HasPrefix(err.Error(), "no record found in the Unchained Index") {
+					return
+				} else {
+					a.Logger.Warn("No record found in the Unchained Index for chain", "chain", chain)
+				}
 			}
 		}
-
-		// a.Busy = false
 	}
 
+	a.Logger.Info("Entering scrape loop: ", "sleep", a.Sleep)
+	time.Sleep(2 * time.Second)
+
 	for {
+		a.Logger.Debug("Entering scraper loop")
 		for _, chain := range a.Config.Targets {
+			a.Logger.Debug("For chain", "chain", chain)
+			time.Sleep(1 * time.Second)
 			if report, err := a.scrapeOnce(chain); err != nil {
 				a.Logger.Error("ScrapeRunOnce failed", "error", err)
 				time.Sleep(time.Duration(a.Sleep) * time.Second)
 
 			} else {
+				a.Logger.Info("In the loop", "sleep", a.Sleep)
+				time.Sleep(20 * time.Second)
 				caughtUp := report.Staged < 30
 				msg := fmt.Sprintf("Behind (%s)...", report.Chain)
 				sMsg := fmt.Sprintf("%d secs", 0)
@@ -89,6 +85,8 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 				)
 				if caughtUp {
 					time.Sleep(time.Duration(a.Sleep) * time.Second)
+				} else {
+					time.Sleep(1 * time.Second)
 				}
 			}
 		}
@@ -97,7 +95,7 @@ func (a *App) scrape(wg *sync.WaitGroup) {
 
 func (a *App) scrapeOnce(chain string) (*Report, error) {
 	// TODO: Allow user to specify block_cnt
-	blockCnt := 100
+	blockCnt := 30
 	opts := sdk.ScrapeOptions{
 		BlockCnt: uint64(blockCnt),
 		Globals: sdk.Globals{
@@ -106,9 +104,10 @@ func (a *App) scrapeOnce(chain string) (*Report, error) {
 	}
 
 	fmt.Fprintf(os.Stderr, "Scraping pass %s (%d blocks)...                \r", chain, blockCnt)
-	if _, meta, err := opts.ScrapeRunOnce(); err != nil {
+	if msg, meta, err := opts.ScrapeRunOnce(); err != nil {
 		return nil, err
 	} else {
+		a.Logger.Info(msg[0].String())
 		return NewReportFromMeta(meta, chain, blockCnt), nil
 	}
 }

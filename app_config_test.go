@@ -4,13 +4,6 @@ import (
 	"testing"
 )
 
-// func TestMain(t *testing.T) {
-// 	fmt.Println(len(os.Args), os.Args)
-// 	os.Args = os.Args[:1]
-// 	fmt.Println(len(os.Args), os.Args)
-// 	main()
-// }
-
 func TestCleanChainString(t *testing.T) {
 	tests := []struct {
 		input    string

@@ -6,16 +6,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-func (a *App) serve() {
+// RunServer runs the API server in a goroutine, waits for it to be ready and then returns.
+func (a *App) RunServer() {
 	ready := make(chan bool)
 	go sdk.NewDaemon(getApiUrl()).Start(ready)
 	<-ready
-	logger.Info(colors.Yellow + "API server started..." + colors.Off)
 }
 
 var apiPort = ""

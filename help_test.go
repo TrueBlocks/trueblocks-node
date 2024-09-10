@@ -124,7 +124,7 @@ func TestParseArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := &App{}
 			os.Args = append([]string{"test"}, tt.args...)
-			resultBool, err := app.parseArgs()
+			resultBool, err := app.ParseArgs()
 			if resultBool != tt.expectBool {
 				t.Errorf("expected %v, got %v", tt.expectBool, resultBool)
 			}

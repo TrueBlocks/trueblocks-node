@@ -46,25 +46,19 @@ For `TB_NODE_DATADIR`, you may use special values for `PWD`, `~`, and `HOME` whi
 
 For `TB_NODE_MAINNETRPC` use the URL of valid (and fast) RPC provider such as those available from [BlockJoy endpoints](https://www.blockjoy.com/).
 
-## Indexing multiple chains
+You may index other chains by exporting additional values in the environment. Please see the file called `env.example` in this folder for more information.
 
-You may index multiple chains at a time by making the appropriate settings.
+## Other environment variables
 
-Please see the file called `env.example` in this folder for more information.
-
-Or, run:
-
-```[bash]
-trueblocks-node --help
-```
-
-to see the command line options.
+You may increase the logging level of the node by setting the `TB_LOGLEVEL` environment variable. Valid values are `debug`, `info`, `warn`, or `error`. The default is `info`. `debug` is the most verbose.
 
 ## Documentation
 
-The documentation is derived from the source code comments and is [available here](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-node/v3).
+The documentation includes this README.md file.
 
-Internally, `trueblocks-node` uses both the [trueblocks-sdk](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-sdk/v3) and [trueBlocks-core](https://trueblocks.io/chifra/introduction/).
+Much more detailed documentation (which is derived from the source code), is [available here](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-node/v3).
+
+Internally, `trueblocks-node` uses both the [trueblocks-sdk](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-sdk/v3) and [trueBlocks-core](https://trueblocks.io/chifra/introduction/). In some cases, documentation for these packages may be useful.
 
 ## Contributing
 

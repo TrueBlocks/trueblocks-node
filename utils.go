@@ -32,7 +32,7 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func PingRpc(providerUrl string) error {
+func pingRpc(providerUrl string) error {
 	jsonData := []byte(`{ "jsonrpc": "2.0", "method": "web3_clientVersion", "id": 6 }`)
 	req, err := http.NewRequest("POST", providerUrl, bytes.NewBuffer(jsonData))
 	if err != nil {

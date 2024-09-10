@@ -22,7 +22,7 @@ func init() {
 	}
 }
 
-func (a *App) establishConfig() error {
+func (a *App) EstablishConfig() error {
 	var ok bool
 	var err error
 	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
@@ -110,7 +110,7 @@ func (a *App) establishConfig() error {
 
 func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 	for i := 1; i <= maxAttempts; i++ {
-		err := PingRpc(providerUrl)
+		err := pingRpc(providerUrl)
 		if err == nil {
 			return nil
 		} else {
@@ -120,7 +120,7 @@ func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 			}
 		}
 	}
-	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", "provider", providerUrl, maxAttempts)
+	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", providerUrl, maxAttempts)
 }
 
 // cleanChainString cleans up the chainStr...no spaces, move 'mainnet' to the front, add it if needed.

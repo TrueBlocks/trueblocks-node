@@ -7,7 +7,7 @@ clean:
 
 run:
 	@make build
-	@./trueblocks-node --init
+	@./trueblocks-node --init all
 
 install:
 	@make build

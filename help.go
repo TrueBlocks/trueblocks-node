@@ -7,8 +7,8 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-// parseArgs makes sure there are no command line arguments (other than --version or --help)
-func (a *App) parseArgs() (bool, error) {
+// ParseArgs makes sure there are no command line arguments (other than --version or --help)
+func (a *App) ParseArgs() (bool, error) {
 	if len(os.Args) < 2 {
 		return true, nil
 	}

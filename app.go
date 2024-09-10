@@ -9,29 +9,48 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
+// Feature is a type that represents the features of the app
 type Feature string
 
 const (
-	Scrape  Feature = "scrape"
+	// The name of the scraper feature. The scraper may not be disabled.
+	Scrape Feature = "scrape"
+	// The name of the monitor feature. The monitor is Off by default. Enable
+	// it with the `--monitor on` option.
 	Monitor Feature = "monitor"
-	Api     Feature = "api"
+	// The name of the API feature. The api is On by default. Disable it
+	// with the `--api off` option.
+	Api Feature = "api"
 )
 
+// InitMode is a type that represents the initialization for the Unchained Index. It
+// applies to the `--init` option.
 type InitMode string
 
 const (
-	All    InitMode = "all"
+	// All cause the initialization to download both the bloom filters and the index
+	// portions of the Unchained Index.
+	All InitMode = "all"
+	// Blooms cause the initialization to download only the bloom filters portion of
+	// the Unchained Index.
 	Blooms InitMode = "blooms"
-	None   InitMode = "none"
+	// None cause the app to not download any part of the Unchained Index. It will be
+	// built from scratch with the scraper.
+	None InitMode = "none"
 )
 
+// OnOff is a type that represents a boolean value that can be either "on" or "off".
 type OnOff string
 
 const (
-	On  OnOff = "on"
+	// On is the "on" value for a feature. It applies to the `--monitor` and `--api` options.
+	On OnOff = "on"
+	// Off is the "off" value for a feature. It applies to the `--monitor` and `--api` options.
 	Off OnOff = "off"
 )
 
+// App is the main struct for the app. It contains the logger, the configuration, and the
+// state of the app.
 type App struct {
 	Logger   *slog.Logger
 	Config   Config
@@ -39,13 +58,14 @@ type App struct {
 	Monitor  OnOff
 	Api      OnOff
 	Sleep    int
-	Busy     bool
 }
 
+// NewApp creates a new App instance with the default values. Export TB_LOGLEVEL
+// in the environment to set the log level. The default log level is "info".
 func NewApp() *App {
 	logger.SetLoggerWriter(io.Discard) // we never want core to log anything
 	logLevel := slog.LevelInfo
-	if ll, ok := os.LookupEnv("TB_NODE_LOGLEVEL"); ok {
+	if ll, ok := os.LookupEnv("TB_LOGLEVEL"); ok {
 		switch strings.ToLower(ll) {
 		case "debug":
 			logLevel = slog.LevelDebug
@@ -82,6 +102,7 @@ func NewApp() *App {
 	return app
 }
 
+// IsOn returns true if the given feauture is enabled. It returns false otherwise.
 func (a *App) IsOn(feature Feature) bool {
 	switch feature {
 	case Scrape:
