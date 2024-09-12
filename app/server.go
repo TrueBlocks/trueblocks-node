@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -9,7 +9,8 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-// RunServer runs the API server in a goroutine, waits for it to be ready and then returns.
+// RunServer runs the API server in a goroutine, waits for it to be ready and then
+// returns. All available trueblocks-core endpoints are available.
 func (a *App) RunServer() {
 	ready := make(chan bool)
 	go sdk.NewDaemon(getApiUrl()).Start(ready)

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-node/v3/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -22,6 +23,7 @@ func init() {
 	}
 }
 
+// EstablishConfig either reads an existing configuration file or creates it if it doesn't exist.
 func (a *App) EstablishConfig() error {
 	var ok bool
 	var err error
@@ -35,13 +37,14 @@ func (a *App) EstablishConfig() error {
 	a.Logger.Info("Using data directory", "dataDir", a.Config.ConfigPath)
 
 	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
+	var targets string
 	if !ok {
-		chainStr = "mainnet"
+		chainStr, targets = "mainnet", "mainnet"
 	} else {
-		var targets string
 		chainStr, targets = cleanChainString(chainStr)
-		a.Config.Targets = strings.Split(targets, ",")
 	}
+	a.Logger.Debug("cleaned chain string", "chainStr", chainStr, "targets", targets)
+	a.Config.Targets = strings.Split(targets, ",")
 
 	chains := strings.Split(chainStr, ",")
 	for _, chain := range chains {
@@ -77,17 +80,17 @@ func (a *App) EstablishConfig() error {
 	}
 
 	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
-	if FileExists(configFn) {
+	if utils.FileExists(configFn) {
 		a.Logger.Info("Using existing config", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
 		return nil
 	}
 
-	if err := EstablishFolder(a.Config.ConfigPath); err != nil {
+	if err := utils.EstablishFolder(a.Config.ConfigPath); err != nil {
 		return err
 	}
 	for _, chain := range chains {
 		chainConfig := filepath.Join(a.Config.ConfigPath, "config", chain)
-		if err := EstablishFolder(chainConfig); err != nil {
+		if err := utils.EstablishFolder(chainConfig); err != nil {
 			return err
 		}
 	}
@@ -110,7 +113,7 @@ func (a *App) EstablishConfig() error {
 
 func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 	for i := 1; i <= maxAttempts; i++ {
-		err := pingRpc(providerUrl)
+		err := utils.PingRpc(providerUrl)
 		if err == nil {
 			return nil
 		} else {
@@ -125,18 +128,18 @@ func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 
 // cleanChainString cleans up the chainStr...no spaces, move 'mainnet' to the front, add it if needed.
 func cleanChainString(in string) (string, string) {
-	targets := strings.ReplaceAll(in, " ", "")
-	targets = strings.Trim(targets, ",")
-	targets = strings.ReplaceAll(targets, ",,", ",")
+	scrapeTargets := strings.ReplaceAll(in, " ", "")
+	scrapeTargets = strings.Trim(scrapeTargets, ",")
+	scrapeTargets = strings.ReplaceAll(scrapeTargets, ",,", ",")
 
-	providers := targets
-	if strings.Contains(providers, "mainnet") {
-		providers = strings.ReplaceAll(providers, "mainnet", "")
-		providers = strings.ReplaceAll(providers, ",,", ",")
+	chains := scrapeTargets
+	if strings.Contains(chains, "mainnet") {
+		chains = strings.ReplaceAll(chains, "mainnet", "")
+		chains = strings.ReplaceAll(chains, ",,", ",")
 	}
-	providers = strings.Trim("mainnet,"+providers, ",")
+	chains = strings.Trim("mainnet,"+chains, ",")
 
-	return providers, targets
+	return chains, scrapeTargets
 }
 
 // cleanDataPath cleans up the data path, replacing PWD, ~, and HOME with the appropriate values
@@ -168,5 +171,5 @@ var configTmpl string = `[version]
   [keys.etherscan]
     apiKey = ""
 
-[chains]{{.ChainConfigs}}
+[chains]{{.TmplChain}}
 `

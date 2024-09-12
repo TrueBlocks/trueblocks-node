@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ import (
 )
 
 // RunScraper runs the scraper in a goroutine. It will scrape the chains in the configuration
-// file and sleep for the duration specified in the configuration file.
+// file and sleep between each run for the duration specified with --sleep.
 func (a *App) RunScraper(wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -56,18 +56,14 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 	a.Logger.Info("Entering scrape loop: ", "sleep", a.Sleep)
 	time.Sleep(2 * time.Second)
 
+	a.Logger.Debug("Entering scraper loop", "targets", a.Config.Targets)
 	for {
-		a.Logger.Debug("Entering scraper loop")
 		for _, chain := range a.Config.Targets {
-			a.Logger.Debug("For chain", "chain", chain)
-			time.Sleep(1 * time.Second)
 			if report, err := a.scrapeOnce(chain); err != nil {
 				a.Logger.Error("ScrapeRunOnce failed", "error", err)
-				time.Sleep(time.Duration(a.Sleep) * time.Second)
+				time.Sleep(1 * time.Second)
 
 			} else {
-				a.Logger.Info("In the loop", "sleep", a.Sleep)
-				time.Sleep(20 * time.Second)
 				caughtUp := report.Staged < 30
 				msg := fmt.Sprintf("Behind (%s)...", report.Chain)
 				sMsg := fmt.Sprintf("%d secs", 0)
@@ -93,7 +89,7 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 	}
 }
 
-func (a *App) scrapeOnce(chain string) (*Report, error) {
+func (a *App) scrapeOnce(chain string) (*scraperReport, error) {
 	// TODO: Allow user to specify block_cnt
 	blockCnt := 30
 	opts := sdk.ScrapeOptions{
@@ -107,12 +103,14 @@ func (a *App) scrapeOnce(chain string) (*Report, error) {
 	if msg, meta, err := opts.ScrapeRunOnce(); err != nil {
 		return nil, err
 	} else {
-		a.Logger.Info(msg[0].String())
-		return NewReportFromMeta(meta, chain, blockCnt), nil
+		if len(msg) > 0 {
+			a.Logger.Info(msg[0].String())
+		}
+		return newScraperReportFromMeta(meta, chain, blockCnt), nil
 	}
 }
 
-type Report struct {
+type scraperReport struct {
 	Chain     string `json:"chain"`
 	BlockCnt  int    `json:"blockCnt"`
 	Head      int    `json:"head"`
@@ -122,13 +120,13 @@ type Report struct {
 	Time      string `json:"time"`
 }
 
-func (r *Report) String() string {
+func (r *scraperReport) String() string {
 	bytes, _ := json.Marshal(r)
 	return string(bytes)
 }
 
-func NewReportFromMeta(meta *types.MetaData, chain string, blockCnt int) *Report {
-	return &Report{
+func newScraperReportFromMeta(meta *types.MetaData, chain string, blockCnt int) *scraperReport {
+	return &scraperReport{
 		Chain:     chain,
 		BlockCnt:  blockCnt,
 		Head:      int(meta.Latest),

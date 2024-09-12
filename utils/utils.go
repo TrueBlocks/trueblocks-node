@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"bytes"
@@ -7,7 +7,8 @@ import (
 	"os"
 )
 
-// EstablishFolder creates folders given a list of folders
+// EstablishFolder ensures that the given folder exists. If any folders in the path must
+// be created, they will be created with 0755 permissions. Returns an error or nil on sucess.
 func EstablishFolder(rootPath string) error {
 	_, err := os.Stat(rootPath)
 	if err != nil {
@@ -24,6 +25,7 @@ func EstablishFolder(rootPath string) error {
 	return nil
 }
 
+// FileExists returns true if the file exists and is not a folder, false otherwise.
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -32,7 +34,8 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func pingRpc(providerUrl string) error {
+// PingRpc sends a ping request to the RPC provider, returns an error or nil on success.
+func PingRpc(providerUrl string) error {
 	jsonData := []byte(`{ "jsonrpc": "2.0", "method": "web3_clientVersion", "id": 6 }`)
 	req, err := http.NewRequest("POST", providerUrl, bytes.NewBuffer(jsonData))
 	if err != nil {

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
 )
 
-// ParseArgs makes sure there are no command line arguments (other than --version or --help)
+// ParseArgs parses the command line options and sets the app's configuration accordingly. See README.md or run trueblocks-node --help.
 func (a *App) ParseArgs() (bool, error) {
 	if len(os.Args) < 2 {
 		return true, nil

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"io"
@@ -7,18 +7,19 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-node/v3/config"
 )
 
 // Feature is a type that represents the features of the app
 type Feature string
 
 const (
-	// The name of the scraper feature. The scraper may not be disabled.
+	// Scrape represents the scraper feature. The scraper may not be disabled.
 	Scrape Feature = "scrape"
-	// The name of the monitor feature. The monitor is Off by default. Enable
+	// Monitor represents the monitor feature. The monitor is Off by default. Enable
 	// it with the `--monitor on` option.
 	Monitor Feature = "monitor"
-	// The name of the API feature. The api is On by default. Disable it
+	// Api represents the API feature. The api is On by default. Disable it
 	// with the `--api off` option.
 	Api Feature = "api"
 )
@@ -53,15 +54,14 @@ const (
 // state of the app.
 type App struct {
 	Logger   *slog.Logger
-	Config   Config
+	Config   config.Config
 	InitMode InitMode
 	Monitor  OnOff
 	Api      OnOff
 	Sleep    int
 }
 
-// NewApp creates a new App instance with the default values. Export TB_LOGLEVEL
-// in the environment to set the log level. The default log level is "info".
+// NewApp creates a new App instance with the default values.
 func NewApp() *App {
 	logger.SetLoggerWriter(io.Discard) // we never want core to log anything
 	logLevel := slog.LevelInfo
@@ -90,7 +90,7 @@ func NewApp() *App {
 	app := &App{
 		Logger: slog.New(slog.NewTextHandler(os.Stderr, &opts)),
 		Sleep:  4,
-		Config: Config{
+		Config: config.Config{
 			ProviderMap: make(map[string]string),
 		},
 		Api:      On,
@@ -106,7 +106,7 @@ func NewApp() *App {
 func (a *App) IsOn(feature Feature) bool {
 	switch feature {
 	case Scrape:
-		return a.InitMode == All || a.InitMode == Blooms
+		return a.InitMode != None
 	case Monitor:
 		return a.Monitor == On
 	case Api:
