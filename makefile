@@ -5,6 +5,10 @@ build: *.go
 clean:
 	@rm -fR data
 
+update:
+	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
+	@go get github.com/TrueBlocks/trueblocks-sdk/v3@latest
+
 run:
 	@make build
 	@./trueblocks-node --init all
@@ -15,4 +19,3 @@ install:
 
 test:
 	@go test ./...
-
