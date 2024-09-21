@@ -126,22 +126,6 @@ func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", providerUrl, maxAttempts)
 }
 
-// cleanChainString cleans up the chainStr...no spaces, move 'mainnet' to the front, add it if needed.
-func cleanChainString(in string) (string, string) {
-	scrapeTargets := strings.ReplaceAll(in, " ", "")
-	scrapeTargets = strings.Trim(scrapeTargets, ",")
-	scrapeTargets = strings.ReplaceAll(scrapeTargets, ",,", ",")
-
-	chains := scrapeTargets
-	if strings.Contains(chains, "mainnet") {
-		chains = strings.ReplaceAll(chains, "mainnet", "")
-		chains = strings.ReplaceAll(chains, ",,", ",")
-	}
-	chains = strings.Trim("mainnet,"+chains, ",")
-
-	return chains, scrapeTargets
-}
-
 // cleanDataPath cleans up the data path, replacing PWD, ~, and HOME with the appropriate values
 func cleanDataPath(in string) (string, error) {
 	pwd, err := os.Getwd()
