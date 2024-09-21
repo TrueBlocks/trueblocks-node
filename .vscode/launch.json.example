@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "program": "${workspaceFolder}",
-            "cwd": "/Users/jrush/Development/trueblocks-node/",
+            "cwd": "~/Development/trueblocks-node/",
             "args": [
                 "--init",
                 "all",

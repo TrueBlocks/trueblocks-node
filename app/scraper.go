@@ -22,34 +22,22 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 
 	if a.InitMode != None {
 		a.Logger.Debug("Entering init mode", "mode", a.InitMode)
+
+		reports := make([]*scraperReport, 0, len(a.Config.Targets))
 		for _, chain := range a.Config.Targets {
-			a.Logger.Debug("For chain", "chain", chain)
-			opts := sdk.InitOptions{
-				Globals: sdk.Globals{
-					Chain: chain,
-				},
-			}
-
-			originalHandler := a.Logger.Handler()
-			a.Logger = slog.New(slog.NewTextHandler(nil, nil))
-			logger.SetLoggerWriter(os.Stderr)
-			var err error
-			if a.InitMode == All {
-				_, _, err = opts.InitAll()
-			} else if a.InitMode == Blooms {
-				_, _, err = opts.Init()
-			}
-			logger.SetLoggerWriter(io.Discard)
-			a.Logger = slog.New(originalHandler)
-
-			if err != nil {
-				a.Logger.Error("", "error", err)
+			if rep, err := a.initOneChain(chain); err != nil {
 				if !strings.HasPrefix(err.Error(), "no record found in the Unchained Index") {
-					return
+					a.Logger.Error("Error", "err", err)
 				} else {
 					a.Logger.Warn("No record found in the Unchained Index for chain", "chain", chain)
 				}
+			} else {
+				reports = append(reports, rep)
 			}
+		}
+
+		for _, report := range reports {
+			a.ReportOneScrape(report)
 		}
 	}
 
@@ -58,55 +46,26 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 
 	a.Logger.Debug("Entering scraper loop", "targets", a.Config.Targets)
 	for {
+		caughtUp := true
 		for _, chain := range a.Config.Targets {
-			if report, err := a.scrapeOnce(chain); err != nil {
+			if report, err := a.scrapeOneChain(chain); err != nil {
 				a.Logger.Error("ScrapeRunOnce failed", "error", err)
 				time.Sleep(1 * time.Second)
 
 			} else {
-				caughtUp := report.Staged < 30
-				msg := fmt.Sprintf("Behind (%s)...", report.Chain)
-				sMsg := fmt.Sprintf("%d secs", 0)
-				if caughtUp {
-					msg = fmt.Sprintf("Caught up (%s)...", report.Chain)
-					sMsg = fmt.Sprintf("%d secs", a.Sleep)
+				// TODO: This should be per-chain from the config file
+				if report.Staged > 28 {
+					caughtUp = false
 				}
-				a.Logger.Info(msg,
-					"head", fmt.Sprintf("% 9d", report.Head),
-					"unripe", -report.Unripe,
-					"staged", -report.Staged,
-					"index", -report.Finalized,
-					"blockCnt", report.BlockCnt,
-					"sleep", sMsg,
-				)
-				if caughtUp {
-					time.Sleep(time.Duration(a.Sleep) * time.Second)
-				} else {
-					time.Sleep(1 * time.Second)
-				}
+				a.ReportOneScrape(report)
 			}
 		}
-	}
-}
 
-func (a *App) scrapeOnce(chain string) (*scraperReport, error) {
-	// TODO: Allow user to specify block_cnt
-	blockCnt := 30
-	opts := sdk.ScrapeOptions{
-		BlockCnt: uint64(blockCnt),
-		Globals: sdk.Globals{
-			Chain: chain,
-		},
-	}
-
-	fmt.Fprintf(os.Stderr, "Scraping pass %s (%d blocks)...                \r", chain, blockCnt)
-	if msg, meta, err := opts.ScrapeRunOnce(); err != nil {
-		return nil, err
-	} else {
-		if len(msg) > 0 {
-			a.Logger.Info(msg[0].String())
+		if caughtUp {
+			time.Sleep(time.Duration(a.Sleep) * time.Second)
+		} else {
+			time.Sleep(1 * time.Second)
 		}
-		return newScraperReportFromMeta(meta, chain, blockCnt), nil
 	}
 }
 
@@ -134,5 +93,85 @@ func newScraperReportFromMeta(meta *types.MetaData, chain string, blockCnt int) 
 		Staged:    int(meta.Latest) - int(meta.Staging),
 		Finalized: int(meta.Latest) - int(meta.Finalized),
 		Time:      time.Now().Format("01-02 15:04:05"),
+	}
+}
+
+func (a *App) ReportOneScrape(report *scraperReport) {
+	if a.LogLevel == slog.LevelDebug {
+		return
+	}
+
+	msg := fmt.Sprintf("Behind (% 10.10s)...", report.Chain)
+	if report.Staged < 30 {
+		msg = fmt.Sprintf("AtHead (% 10.10s)...", report.Chain)
+	}
+	data := fmt.Sprintf("head: % 9d unripe: % 7d staged: % 7d index: % 7d blockCnt: % 4d",
+		report.Head, -report.Unripe, -report.Staged, -report.Finalized, report.BlockCnt)
+	a.Logger.Info(msg, "data", data)
+}
+
+func (a *App) initOneChain(chain string) (*scraperReport, error) {
+	a.Logger.Debug("For chain", "chain", chain)
+
+	originalHandler := a.Logger.Handler()
+	defer func() {
+		logger.SetLoggerWriter(io.Discard)
+		a.Logger = slog.New(originalHandler)
+		os.Setenv("TB_NODE_RUNINIT", "")
+	}()
+	a.Logger = slog.New(slog.NewTextHandler(nil, nil))
+	logger.SetLoggerWriter(os.Stderr)
+	os.Setenv("TB_NODE_RUNINIT", "true")
+
+	opts := sdk.InitOptions{
+		Globals: sdk.Globals{
+			Chain: chain,
+		},
+	}
+
+	var err error
+	var meta *types.MetaData
+	if a.InitMode == All {
+		_, meta, err = opts.InitAll()
+	} else if a.InitMode == Blooms {
+		_, meta, err = opts.Init()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return newScraperReportFromMeta(meta, chain, a.BlockCnt), nil
+}
+
+// ----------------------------------------------------------------------------------
+func (a *App) scrapeOneChain(chain string) (*scraperReport, error) {
+	a.Logger.Debug("Scraping pass %s (%d blocks)...", chain, a.BlockCnt)
+
+	if a.LogLevel == slog.LevelDebug {
+		originalHandler := a.Logger.Handler()
+		defer func() {
+			logger.SetLoggerWriter(io.Discard)
+			a.Logger = slog.New(originalHandler)
+			os.Setenv("TB_NODE_RUNSCRAPER", "")
+		}()
+		a.Logger = slog.New(slog.NewTextHandler(nil, nil))
+		logger.SetLoggerWriter(os.Stderr)
+		os.Setenv("TB_NODE_RUNSCRAPER", "true")
+	}
+
+	opts := sdk.ScrapeOptions{
+		BlockCnt: uint64(a.BlockCnt),
+		Globals: sdk.Globals{
+			Chain: chain,
+		},
+	}
+
+	if msg, meta, err := opts.ScrapeRunOnce(); err != nil {
+		return nil, err
+	} else {
+		if len(msg) > 0 {
+			a.Logger.Info(msg[0].String())
+		}
+		return newScraperReportFromMeta(meta, chain, a.BlockCnt), nil
 	}
 }

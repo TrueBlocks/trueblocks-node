@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-node/v3/config"
 )
@@ -59,6 +60,8 @@ type App struct {
 	Monitor  OnOff
 	Api      OnOff
 	Sleep    int
+	BlockCnt int
+	LogLevel slog.Level
 }
 
 // NewApp creates a new App instance with the default values.
@@ -87,6 +90,11 @@ func NewApp() *App {
 		},
 	}
 
+	blockCnt := 200
+	if bc, ok := os.LookupEnv("TB_NODE_BLOCKCNT"); ok {
+		blockCnt = int(base.MustParseUint64(bc))
+	}
+
 	app := &App{
 		Logger: slog.New(slog.NewTextHandler(os.Stderr, &opts)),
 		Sleep:  4,
@@ -96,6 +104,8 @@ func NewApp() *App {
 		Api:      On,
 		Monitor:  Off,
 		InitMode: Blooms,
+		BlockCnt: blockCnt,
+		LogLevel: logLevel,
 	}
 	// app.Logger.Info("Starting", "logLevel", logLevel)
 
