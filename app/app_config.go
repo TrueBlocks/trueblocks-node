@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,8 +18,10 @@ import (
 
 func init() {
 	if pwd, err := os.Getwd(); err == nil {
-		if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
-			fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
+		if utils.FileExists(filepath.Join(pwd, ".env")) {
+			if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
+				fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
+			}
 		}
 	}
 }
@@ -36,12 +39,14 @@ func (a *App) EstablishConfig() error {
 	}
 	a.Logger.Info("Using data directory", "dataDir", a.Config.ConfigPath)
 
-	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
 	var targets string
+	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
 	if !ok {
 		chainStr, targets = "mainnet", "mainnet"
 	} else {
-		chainStr, targets = cleanChainString(chainStr)
+		if chainStr, targets, err = cleanChainString(chainStr); err != nil {
+			return err
+		}
 	}
 	a.Logger.Debug("cleaned chain string", "chainStr", chainStr, "targets", targets)
 	a.Config.Targets = strings.Split(targets, ",")
@@ -54,6 +59,9 @@ func (a *App) EstablishConfig() error {
 			return errors.New(msg)
 		} else {
 			providerUrl = strings.Trim(providerUrl, "/")
+			if !isValidURL(providerUrl) {
+				return fmt.Errorf("invalid URL for %s: %s", key, providerUrl)
+			}
 			if err := a.tryConnect(providerUrl, 5); err != nil {
 				return err
 			} else {
@@ -126,6 +134,11 @@ func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", providerUrl, maxAttempts)
 }
 
+func isValidURL(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
 // cleanDataPath cleans up the data path, replacing PWD, ~, and HOME with the appropriate values
 func cleanDataPath(in string) (string, error) {
 	pwd, err := os.Getwd()
@@ -140,7 +153,11 @@ func cleanDataPath(in string) (string, error) {
 	}
 	out = strings.ReplaceAll(out, "~", home)
 	out = strings.ReplaceAll(out, "HOME", home)
-	return filepath.Clean(out), nil
+	ret := filepath.Clean(out)
+	if strings.HasSuffix(ret, "/unchained") {
+		ret = strings.ReplaceAll(ret, "/unchained", "")
+	}
+	return ret, nil
 }
 
 var configTmpl string = `[version]
