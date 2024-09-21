@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,8 +37,8 @@ func (a *App) EstablishConfig() error {
 	}
 	a.Logger.Info("Using data directory", "dataDir", a.Config.ConfigPath)
 
-	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
 	var targets string
+	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
 	if !ok {
 		chainStr, targets = "mainnet", "mainnet"
 	} else {
@@ -54,6 +55,9 @@ func (a *App) EstablishConfig() error {
 			return errors.New(msg)
 		} else {
 			providerUrl = strings.Trim(providerUrl, "/")
+			if !isValidURL(providerUrl) {
+				return fmt.Errorf("invalid URL for %s: %s", key, providerUrl)
+			}
 			if err := a.tryConnect(providerUrl, 5); err != nil {
 				return err
 			} else {
@@ -126,20 +130,9 @@ func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
 	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", providerUrl, maxAttempts)
 }
 
-// cleanChainString cleans up the chainStr...no spaces, move 'mainnet' to the front, add it if needed.
-func cleanChainString(in string) (string, string) {
-	scrapeTargets := strings.ReplaceAll(in, " ", "")
-	scrapeTargets = strings.Trim(scrapeTargets, ",")
-	scrapeTargets = strings.ReplaceAll(scrapeTargets, ",,", ",")
-
-	chains := scrapeTargets
-	if strings.Contains(chains, "mainnet") {
-		chains = strings.ReplaceAll(chains, "mainnet", "")
-		chains = strings.ReplaceAll(chains, ",,", ",")
-	}
-	chains = strings.Trim("mainnet,"+chains, ",")
-
-	return chains, scrapeTargets
+func isValidURL(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
 // cleanDataPath cleans up the data path, replacing PWD, ~, and HOME with the appropriate values
