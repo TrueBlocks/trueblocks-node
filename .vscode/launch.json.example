@@ -10,11 +10,11 @@
             "request": "launch",
             "program": "${workspaceFolder}",
             "cwd": "/Users/jrush/Development/trueblocks-node/",
-            "args": [],
-            "env": {
-                "TB_NODE_DATADIR": "PWD/data",
-                "TB_NODE_MAINNETRPC": "http://localhost:23456",
-            }
+            "args": [
+                "--init",
+                "all",
+            ],
+            "env": {}
         }
     ]
 }
