@@ -18,8 +18,10 @@ import (
 
 func init() {
 	if pwd, err := os.Getwd(); err == nil {
-		if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
-			fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
+		if utils.FileExists(filepath.Join(pwd, ".env")) {
+			if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
+				fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
+			}
 		}
 	}
 }
@@ -42,7 +44,9 @@ func (a *App) EstablishConfig() error {
 	if !ok {
 		chainStr, targets = "mainnet", "mainnet"
 	} else {
-		chainStr, targets = cleanChainString(chainStr)
+		if chainStr, targets, err = cleanChainString(chainStr); err != nil {
+			return err
+		}
 	}
 	a.Logger.Debug("cleaned chain string", "chainStr", chainStr, "targets", targets)
 	a.Config.Targets = strings.Split(targets, ",")
@@ -149,7 +153,11 @@ func cleanDataPath(in string) (string, error) {
 	}
 	out = strings.ReplaceAll(out, "~", home)
 	out = strings.ReplaceAll(out, "HOME", home)
-	return filepath.Clean(out), nil
+	ret := filepath.Clean(out)
+	if strings.HasSuffix(ret, "/unchained") {
+		ret = strings.ReplaceAll(ret, "/unchained", "")
+	}
+	return ret, nil
 }
 
 var configTmpl string = `[version]
