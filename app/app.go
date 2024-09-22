@@ -1,13 +1,10 @@
 package app
 
 import (
-	"io"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-node/v3/config"
 )
 
@@ -66,48 +63,24 @@ type App struct {
 
 // NewApp creates a new App instance with the default values.
 func NewApp() *App {
-	logger.SetLoggerWriter(io.Discard) // we never want core to log anything
-	logLevel := slog.LevelInfo
-	if ll, ok := os.LookupEnv("TB_LOGLEVEL"); ok {
-		switch strings.ToLower(ll) {
-		case "debug":
-			logLevel = slog.LevelDebug
-		case "info":
-			logLevel = slog.LevelInfo
-		case "warn":
-			logLevel = slog.LevelWarn
-		case "error":
-			logLevel = slog.LevelError
-		}
-	}
-	opts := slog.HandlerOptions{
-		Level: logLevel,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.TimeKey {
-				a.Value = slog.StringValue(a.Value.Time().Format("15:04:05"))
-			}
-			return a
-		},
-	}
-
-	blockCnt := 200
+	blockCnt := 2000
 	if bc, ok := os.LookupEnv("TB_NODE_BLOCKCNT"); ok {
 		blockCnt = int(base.MustParseUint64(bc))
 	}
 
+	customLogger, logLevel := NewCustomLogger()
 	app := &App{
-		Logger: slog.New(slog.NewTextHandler(os.Stderr, &opts)),
-		Sleep:  4,
-		Config: config.Config{
-			ProviderMap: make(map[string]string),
-		},
+		Logger:   customLogger,
+		LogLevel: logLevel,
+		Sleep:    6,
 		Api:      On,
 		Monitor:  Off,
 		InitMode: Blooms,
 		BlockCnt: blockCnt,
-		LogLevel: logLevel,
+		Config: config.Config{
+			ProviderMap: make(map[string]string),
+		},
 	}
-	// app.Logger.Info("Starting", "logLevel", logLevel)
 
 	return app
 }

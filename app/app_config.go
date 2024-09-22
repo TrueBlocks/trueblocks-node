@@ -48,7 +48,7 @@ func (a *App) EstablishConfig() error {
 			return err
 		}
 	}
-	a.Logger.Debug("cleaned chain string", "chainStr", chainStr, "targets", targets)
+	a.Logger.Info("cleaned chain string", "chainStr", chainStr, "targets", targets)
 	a.Config.Targets = strings.Split(targets, ",")
 
 	chains := strings.Split(chainStr, ",")
@@ -81,9 +81,9 @@ func (a *App) EstablishConfig() error {
 		os.Setenv(envKey, providerUrl)
 	}
 
-	for i, env := range os.Environ() {
+	for _, env := range os.Environ() {
 		if strings.HasPrefix(env, "TB_") || strings.HasPrefix(env, "XDG_") {
-			a.Logger.Debug(fmt.Sprintf("Env[%d]:", i), "value", env)
+			a.Logger.Info("environment", "value", env)
 		}
 	}
 
