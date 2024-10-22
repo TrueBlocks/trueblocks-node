@@ -1,6 +1,6 @@
 module github.com/TrueBlocks/trueblocks-node/v3
 
-go 1.23
+go 1.22
 
 require (
 	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20240923025630-c4c09cafc138
