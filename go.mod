@@ -1,5 +1,6 @@
 module github.com/TrueBlocks/trueblocks-node/v3
 
+// Go Version
 go 1.22
 
 require (
