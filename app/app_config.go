@@ -11,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-node/v3/utils"
 	"github.com/joho/godotenv"
@@ -62,10 +63,10 @@ func (a *App) EstablishConfig() error {
 			if !isValidURL(providerUrl) {
 				return fmt.Errorf("invalid URL for %s: %s", key, providerUrl)
 			}
-			if err := a.tryConnect(providerUrl, 5); err != nil {
+			if err := a.tryConnect(chain, providerUrl, 5); err != nil {
 				return err
 			} else {
-				a.Logger.Info("connected to RPC", "providerUrl", providerUrl)
+				a.Logger.Info("connected to RPC", "chain", chain, "providerUrl", providerUrl)
 			}
 			a.Config.ProviderMap[chain] = providerUrl
 		}
@@ -90,6 +91,16 @@ func (a *App) EstablishConfig() error {
 	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
 	if utils.FileExists(configFn) {
 		a.Logger.Info("Using existing config", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
+		// check to make sure the config file has all the chains
+		contents := file.AsciiFileToString(configFn)
+		for chain, _ := range a.Config.ProviderMap {
+			search := "[chains." + chain + "]"
+			if !strings.Contains(contents, search) {
+				msg := fmt.Sprintf("config file {%s} does not contain {%s}", configFn, search)
+				msg = colors.ColoredWith(msg, colors.Red)
+				return errors.New(msg)
+			}
+		}
 		return nil
 	}
 
@@ -119,19 +130,19 @@ func (a *App) EstablishConfig() error {
 	return nil
 }
 
-func (a *App) tryConnect(providerUrl string, maxAttempts int) error {
+func (a *App) tryConnect(chain, providerUrl string, maxAttempts int) error {
 	for i := 1; i <= maxAttempts; i++ {
 		err := utils.PingRpc(providerUrl)
 		if err == nil {
 			return nil
 		} else {
-			a.Logger.Warn("retrying RPC", "provider", providerUrl)
+			a.Logger.Warn("retrying RPC", "chain", chain, "provider", providerUrl)
 			if i < maxAttempts {
 				time.Sleep(1 * time.Second)
 			}
 		}
 	}
-	return fmt.Errorf("failed to connect to RPC (%s) after %d attempts", providerUrl, maxAttempts)
+	return fmt.Errorf("failed to connect to RPC (%s-%s) after %d attempts", chain, providerUrl, maxAttempts)
 }
 
 func isValidURL(str string) bool {

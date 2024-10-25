@@ -50,7 +50,7 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 		msg := []any{"sleep", a.Sleep}
 		for _, chain := range a.Config.Targets {
 			if report, err := a.scrapeOneChain(chain); err != nil {
-				a.Logger.Error("ScrapeRunOnce failed", "error", err)
+				a.Logger.Error("ScrapeRunOnce failed", "chain", chain, "error", err)
 				time.Sleep(1 * time.Second)
 
 			} else {
