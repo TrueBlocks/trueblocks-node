@@ -4,7 +4,7 @@ module github.com/TrueBlocks/trueblocks-node/v3
 go 1.22
 
 require (
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241029040126-dfdcbfaef4e9
+	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241103175024-0c8daa9e5abd
 	github.com/TrueBlocks/trueblocks-sdk/v3 v3.7.0
 	github.com/joho/godotenv v1.5.1
 )
