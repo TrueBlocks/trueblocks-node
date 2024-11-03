@@ -6,8 +6,8 @@ clean:
 	@rm -fR data
 
 update:
-	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
 	@go get github.com/TrueBlocks/trueblocks-sdk/v3@latest
+	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
 
 run:
 	@make build
