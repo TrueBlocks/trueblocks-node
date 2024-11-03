@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -110,7 +111,7 @@ func TestParseArgs(t *testing.T) {
 			name:       "Help Flag",
 			args:       []string{"--help"},
 			expectBool: false,
-			expectErr:  fmt.Errorf(helpText),
+			expectErr:  errors.New(helpText),
 		},
 		// {
 		// 	name:       "Unknown Flag",

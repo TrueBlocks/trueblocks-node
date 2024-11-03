@@ -93,7 +93,7 @@ func (a *App) EstablishConfig() error {
 		a.Logger.Info("Using existing config", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
 		// check to make sure the config file has all the chains
 		contents := file.AsciiFileToString(configFn)
-		for chain, _ := range a.Config.ProviderMap {
+		for chain := range a.Config.ProviderMap {
 			search := "[chains." + chain + "]"
 			if !strings.Contains(contents, search) {
 				msg := fmt.Sprintf("config file {%s} does not contain {%s}", configFn, search)
