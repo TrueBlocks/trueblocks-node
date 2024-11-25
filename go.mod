@@ -3,8 +3,6 @@ module github.com/TrueBlocks/trueblocks-node/v3
 // Go Version
 go 1.22
 
-replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
-
 require (
 	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241103193928-2a3d9f89af63
 	github.com/TrueBlocks/trueblocks-sdk/v3 v3.9.0
