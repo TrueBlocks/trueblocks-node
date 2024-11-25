@@ -3,8 +3,10 @@ module github.com/TrueBlocks/trueblocks-node/v3
 // Go Version
 go 1.22
 
+replace github.com/TrueBlocks/trueblocks-core/src/apps/chifra => ../src/apps/chifra
+
 require (
-	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241103191228-02c20058347c
+	github.com/TrueBlocks/trueblocks-core/src/apps/chifra v0.0.0-20241103193928-2a3d9f89af63
 	github.com/TrueBlocks/trueblocks-sdk/v3 v3.8.0
 	github.com/joho/godotenv v1.5.1
 )
@@ -37,8 +39,6 @@ require (
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-ipfs-api v0.6.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/leaanthony/slicer v1.6.0 // indirect
-	github.com/leaanthony/u v1.1.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p v0.27.8 // indirect
@@ -64,7 +64,6 @@ require (
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/wailsapp/wails/v2 v2.8.2 // indirect
 	github.com/wealdtech/go-ens/v3 v3.5.2 // indirect
 	github.com/wealdtech/go-multicodec v1.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
