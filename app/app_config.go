@@ -13,7 +13,6 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
 	"github.com/TrueBlocks/trueblocks-node/v3/utils"
 	"github.com/joho/godotenv"
 )
@@ -133,7 +132,7 @@ func (a *App) EstablishConfig() error {
 
 func (a *App) tryConnect(chain, providerUrl string, maxAttempts int) error {
 	for i := 1; i <= maxAttempts; i++ {
-		err := rpc.PingRpc(providerUrl)
+		err := utils.PingRpc(providerUrl)
 		if err == nil {
 			return nil
 		} else {
