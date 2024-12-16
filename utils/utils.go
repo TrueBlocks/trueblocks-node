@@ -1,9 +1,6 @@
 package utils
 
 import (
-	"bytes"
-	"fmt"
-	"net/http"
 	"os"
 )
 
@@ -32,27 +29,4 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
-}
-
-// PingRpc sends a ping request to the RPC provider, returns an error or nil on success.
-func PingRpc(providerUrl string) error {
-	jsonData := []byte(`{ "jsonrpc": "2.0", "method": "web3_clientVersion", "id": 6 }`)
-	req, err := http.NewRequest("POST", providerUrl, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	clientHTTP := &http.Client{}
-	resp, err := clientHTTP.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
 }

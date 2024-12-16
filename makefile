@@ -1,6 +1,6 @@
 build: *.go
+	@building node
 	@rm -f *node ; go build -o trueblocks-node *.go
-
 
 clean:
 	@rm -fR data
