@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-node/v4/utils"
 )
 
 // TmplEntry represents the configuration of a single chain in the configurion file's template.
@@ -28,7 +27,7 @@ type TmplEntry struct {
 func (c *Config) TmplChain() string {
 	dataFn := filepath.Join("chains.json")
 	chainData := file.AsciiFileToString(dataFn)
-	if !utils.FileExists(dataFn) || len(chainData) == 0 {
+	if !file.FileExists(dataFn) || len(chainData) == 0 {
 		chainData = `{
   "mainnet": {
     "chain": "mainnet",

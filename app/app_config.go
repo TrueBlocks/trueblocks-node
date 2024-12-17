@@ -14,13 +14,12 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-node/v4/utils"
 	"github.com/joho/godotenv"
 )
 
 func init() {
 	if pwd, err := os.Getwd(); err == nil {
-		if utils.FileExists(filepath.Join(pwd, ".env")) {
+		if file.FileExists(filepath.Join(pwd, ".env")) {
 			if err = godotenv.Load(filepath.Join(pwd, ".env")); err != nil {
 				fmt.Fprintf(os.Stderr, "Found .env, but could not read it\n")
 			}
@@ -90,7 +89,7 @@ func (a *App) EstablishConfig() error {
 	}
 
 	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
-	if utils.FileExists(configFn) {
+	if file.FileExists(configFn) {
 		a.Logger.Info("Using existing config", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
 		// check to make sure the config file has all the chains
 		contents := file.AsciiFileToString(configFn)
@@ -105,12 +104,12 @@ func (a *App) EstablishConfig() error {
 		return nil
 	}
 
-	if err := utils.EstablishFolder(a.Config.ConfigPath); err != nil {
+	if err := file.EstablishFolder(a.Config.ConfigPath); err != nil {
 		return err
 	}
 	for _, chain := range chains {
 		chainConfig := filepath.Join(a.Config.ConfigPath, "config", chain)
-		if err := utils.EstablishFolder(chainConfig); err != nil {
+		if err := file.EstablishFolder(chainConfig); err != nil {
 			return err
 		}
 	}
