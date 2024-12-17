@@ -1,5 +1,5 @@
-build: *.go
-	@building node
+all: *.go
+	@echo building node
 	@rm -f *node ; go build -o trueblocks-node *.go
 
 clean:
