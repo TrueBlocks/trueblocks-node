@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 )
 
 // RunServer runs the API server in a goroutine, waits for it to be ready and then

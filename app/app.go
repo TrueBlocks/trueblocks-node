@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
-	"github.com/TrueBlocks/trueblocks-node/v3/config"
+	"github.com/TrueBlocks/trueblocks-node/v4/config"
 )
 
 // Feature is a type that represents the features of the app

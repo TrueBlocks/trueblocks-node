@@ -14,7 +14,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/rpc"
-	"github.com/TrueBlocks/trueblocks-node/v3/utils"
+	"github.com/TrueBlocks/trueblocks-node/v4/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -173,7 +173,7 @@ func cleanDataPath(in string) (string, error) {
 }
 
 var configTmpl string = `[version]
-  current = "v3.3.0-release"
+  current = "v4.0.0"
 
 [settings]
   cachePath = "{{.CachePath}}"

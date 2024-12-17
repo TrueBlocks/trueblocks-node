@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/TrueBlocks/trueblocks-node/v3/app"
+	"github.com/TrueBlocks/trueblocks-node/v4/app"
 )
 
 func main() {

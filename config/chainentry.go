@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-node/v3/utils"
+	"github.com/TrueBlocks/trueblocks-node/v4/utils"
 )
 
 // TmplEntry represents the configuration of a single chain in the configurion file's template.

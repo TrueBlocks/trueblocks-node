@@ -5,7 +5,7 @@ A minimal indexing/monitoring trueblocks node.
 ## Installation
 
 ```bash
-go install github.com/TrueBlocks/trueblocks-node/v3@latest
+go install github.com/TrueBlocks/trueblocks-node/v4@latest
 ```
 
 This will install the `trueblocks-node` binary in your `GOBIN` directory which is likely in your `$PATH`.
@@ -56,9 +56,9 @@ You may increase the logging level of the node by setting the `TB_LOGLEVEL` envi
 
 The documentation includes this README.md file.
 
-Much more detailed documentation (which is derived from the source code), is [available here](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-node/v3).
+Much more detailed documentation (which is derived from the source code), is [available here](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-node/v4).
 
-Internally, `trueblocks-node` uses both the [trueblocks-sdk](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-sdk/v3) and [trueBlocks-core](https://trueblocks.io/chifra/introduction/). In some cases, documentation for these packages may be useful.
+Internally, `trueblocks-node` uses both the [trueblocks-sdk](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-sdk/v4) and [trueBlocks-core](https://trueblocks.io/chifra/introduction/). In some cases, documentation for these packages may be useful.
 
 ## Contributing
 

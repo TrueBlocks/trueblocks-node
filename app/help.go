@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v3"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 )
 
 // ParseArgs parses the command line options and sets the app's configuration accordingly. See README.md or run trueblocks-node --help.
