@@ -1,4 +1,4 @@
-module github.com/TrueBlocks/trueblocks-node/v3
+module github.com/TrueBlocks/trueblocks-node/v4
 
 // Go Version
 go 1.23
