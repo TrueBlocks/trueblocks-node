@@ -192,5 +192,5 @@ var configTmpl string = `[version]
   [keys.etherscan]
     apiKey = ""
 
-[chains]{{.TmplChain}}
+[chains]{{.ChainDescriptors}}
 `

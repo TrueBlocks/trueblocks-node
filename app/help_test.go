@@ -1,11 +1,8 @@
 package app
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestParseArgs(t *testing.T) {
@@ -13,7 +10,7 @@ func TestParseArgs(t *testing.T) {
 		name       string
 		args       []string
 		expectBool bool
-		expectErr  error
+		expectErr  string
 		initMode   InitMode
 		api        OnOff
 		monitor    OnOff
@@ -23,124 +20,130 @@ func TestParseArgs(t *testing.T) {
 			name:       "No Arguments",
 			args:       []string{},
 			expectBool: true,
-			expectErr:  nil,
+			expectErr:  "",
 		},
 		{
 			name:       "Valid Init",
 			args:       []string{"--init", "all"},
 			expectBool: true,
-			expectErr:  nil,
+			expectErr:  "",
 			initMode:   All,
 		},
 		{
 			name:       "Missing Init Argument",
 			args:       []string{"--init"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("missing argument for --init"),
+			expectErr:  "missing argument for --init",
 		},
 		{
 			name:       "Invalid Init Argument",
 			args:       []string{"--init", "invalid"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("invalid value: invalid"),
+			expectErr:  "parsing --init: invalid value for mode: invalid",
 		},
 		{
 			name:       "Valid API",
 			args:       []string{"--api", "on"},
 			expectBool: true,
-			expectErr:  nil,
+			expectErr:  "",
 			api:        On,
 		},
 		{
 			name:       "Missing API Argument",
 			args:       []string{"--api"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("missing argument for --init"), // Correct this to match the actual error message
+			expectErr:  "missing argument for --api",
 		},
 		{
 			name:       "Invalid API Argument",
 			args:       []string{"--api", "invalid"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("invalid value: invalid"),
+			expectErr:  "parsing --api: invalid value for onOff: invalid",
 		},
 		{
 			name:       "Valid Monitor",
 			args:       []string{"--monitor", "off"},
 			expectBool: true,
-			expectErr:  nil,
+			expectErr:  "",
 			monitor:    Off,
 		},
 		{
 			name:       "Missing Monitor Argument",
 			args:       []string{"--monitor"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("missing argument for --monitor"),
+			expectErr:  "missing argument for --monitor",
 		},
 		{
 			name:       "Invalid Monitor Argument",
 			args:       []string{"--monitor", "invalid"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("invalid value: invalid"),
+			expectErr:  "parsing --monitor: invalid value for onOff: invalid",
 		},
 		{
 			name:       "Valid Sleep",
 			args:       []string{"--sleep", "60"},
 			expectBool: true,
-			expectErr:  nil,
-			sleep:      int(60 * time.Second),
+			expectErr:  "",
+			sleep:      60,
 		},
 		{
 			name:       "Missing Sleep Argument",
 			args:       []string{"--sleep"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("missing argument for --sleep"),
+			expectErr:  "missing argument for --sleep",
 		},
 		{
 			name:       "Invalid Sleep Argument",
 			args:       []string{"--sleep", "invalid"},
 			expectBool: true,
-			expectErr:  fmt.Errorf("invalid value for --sleep: invalid"),
+			expectErr:  "parsing --sleep: invalid value for sleep: invalid",
 		},
 		{
 			name:       "Version Flag",
 			args:       []string{"--version"},
 			expectBool: false,
-			expectErr:  nil,
+			expectErr:  "",
 		},
 		{
 			name:       "Help Flag",
 			args:       []string{"--help"},
 			expectBool: false,
-			expectErr:  errors.New(helpText),
+			expectErr:  "", // helpText,
 		},
-		// {
-		// 	name:       "Unknown Flag",
-		// 	args:       []string{"--junk"},
-		// 	expectBool: false,
-		// 	expectErr:  fmt.Errorf("%s%s", "Unknown option:--junk\n", helpText),
-		// },
+		{
+			name:       "Unknown Flag",
+			args:       []string{"--junk"},
+			expectBool: true,
+			expectErr:  "unknown option:--junk\n" + helpText,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := &App{}
+			app := NewApp()
 			os.Args = append([]string{"test"}, tt.args...)
 			resultBool, err := app.ParseArgs()
+
 			if resultBool != tt.expectBool {
 				t.Errorf("expected %v, got %v", tt.expectBool, resultBool)
 			}
-			if (err == nil) != (tt.expectErr == nil) || (err != nil && err.Error() != tt.expectErr.Error()) {
-				t.Errorf("expected error %v, got %v", tt.expectErr, err)
+
+			if (err == nil && tt.expectErr != "") || (err != nil && err.Error() != tt.expectErr) {
+				t.Errorf("expected error %q, got %q", tt.expectErr, err)
 			}
+
 			if tt.initMode != "" && app.InitMode != tt.initMode {
 				t.Errorf("expected InitMode %v, got %v", tt.initMode, app.InitMode)
 			}
+
 			if tt.api != "" && app.Api != tt.api {
 				t.Errorf("expected Api %v, got %v", tt.api, app.Api)
 			}
+
 			if tt.monitor != "" && app.Monitor != tt.monitor {
 				t.Errorf("expected Monitor %v, got %v", tt.monitor, app.Monitor)
 			}
+
 			if tt.sleep != 0 && app.Sleep != tt.sleep {
 				t.Errorf("expected Sleep %v, got %v", tt.sleep, app.Sleep)
 			}

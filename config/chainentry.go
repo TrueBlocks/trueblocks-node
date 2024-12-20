@@ -11,8 +11,8 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 )
 
-// TmplEntry represents the configuration of a single chain in the configurion file's template.
-type TmplEntry struct {
+// ChainDescriptor represents the configuration of a single chain in the configurion file's template.
+type ChainDescriptor struct {
 	Chain          string `json:"chain"`
 	ChainId        string `json:"chainId"`
 	LocalExplorer  string `json:"localExplorer"`
@@ -21,10 +21,10 @@ type TmplEntry struct {
 	Symbol         string `json:"symbol"`
 }
 
-// TmplChain is used used to establish the app's config file (with a GoLang template) if it doesn't
+// ChainDescriptors is used used to establish the app's config file (with a GoLang template) if it doesn't
 // exist. Note this is a shortened form of the trueblocks-core's configuration file which will be
 // used if it already exists.
-func (c *Config) TmplChain() string {
+func (c *Config) ChainDescriptors() string {
 	dataFn := filepath.Join("chains.json")
 	chainData := file.AsciiFileToString(dataFn)
 	if !file.FileExists(dataFn) || len(chainData) == 0 {
@@ -34,12 +34,12 @@ func (c *Config) TmplChain() string {
     "chainId": "1",
     "remoteExplorer": "https://etherscan.io",
     "symbol": "ETH"
-  },
+  }
 }
 `
 	}
 
-	chains := make(map[string]TmplEntry)
+	chains := make(map[string]ChainDescriptor)
 	if err := json.Unmarshal([]byte(chainData), &chains); err != nil {
 		return err.Error()
 	}
