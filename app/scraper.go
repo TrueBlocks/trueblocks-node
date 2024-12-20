@@ -27,7 +27,7 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 		for _, chain := range a.Config.Targets {
 			if rep, err := a.initOneChain(chain); err != nil {
 				if !strings.HasPrefix(err.Error(), "no record found in the Unchained Index") {
-					a.Logger.Error("Error", "err", err)
+					a.Logger.Warn("Warning", "msg", err)
 				} else {
 					a.Logger.Warn("No record found in the Unchained Index for chain", "chain", chain)
 				}
@@ -50,7 +50,7 @@ func (a *App) RunScraper(wg *sync.WaitGroup) {
 		msg := []any{"sleep", a.Sleep}
 		for _, chain := range a.Config.Targets {
 			if report, err := a.scrapeOneChain(chain); err != nil {
-				a.Logger.Error("ScrapeRunOnce failed", "chain", chain, "error", err)
+				a.Logger.Warn("Warning", "msg", "ScrapeRunOnce skipped", "chain", chain, "error", err)
 				time.Sleep(1 * time.Second)
 
 			} else {
@@ -118,7 +118,7 @@ func (a *App) ReportOneScrape(report *scraperReport) {
 }
 
 func (a *App) initOneChain(chain string) (*scraperReport, error) {
-	a.Logger.Info("For chain", "chain", chain)
+	a.Logger.Info("initializing unchained index", "chain", chain)
 
 	originalHandler := a.Logger.Handler()
 	defer func() {

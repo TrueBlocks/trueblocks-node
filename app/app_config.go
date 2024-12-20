@@ -32,13 +32,13 @@ func (a *App) EstablishConfig() error {
 	var ok bool
 	var err error
 	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {
-		return errors.New("TB_NODE_DATADIR is required in the environment")
+		return errors.New("environment variable `TB_NODE_DATADIR` is required but not found")
 	} else {
 		if a.Config.ConfigPath, err = cleanDataPath(a.Config.ConfigPath); err != nil {
 			return err
 		}
 	}
-	a.Logger.Info("Using data directory", "dataDir", a.Config.ConfigPath)
+	a.Logger.Info("data directory", "dataDir", a.Config.ConfigPath)
 
 	var targets string
 	chainStr, ok := os.LookupEnv("TB_NODE_CHAINS")
@@ -49,24 +49,19 @@ func (a *App) EstablishConfig() error {
 			return err
 		}
 	}
-	a.Logger.Info("cleaned chain string", "chainStr", chainStr, "targets", targets)
+	a.Logger.Info("configured chains", "chainStr", chainStr, "targets", targets)
 	a.Config.Targets = strings.Split(targets, ",")
 
 	chains := strings.Split(chainStr, ",")
 	for _, chain := range chains {
 		key := "TB_NODE_" + strings.ToUpper(chain) + "RPC"
 		if providerUrl, ok := os.LookupEnv(key); !ok {
-			msg := fmt.Sprintf("%s is required in the environment (implied by TB_NODE_CHAINS=%s)", key, chainStr)
+			msg := fmt.Sprintf("environment variable `%s` is required but not found (implied by TB_NODE_CHAINS=%s)", key, chainStr)
 			return errors.New(msg)
 		} else {
 			providerUrl = strings.Trim(providerUrl, "/")
 			if !isValidURL(providerUrl) {
 				return fmt.Errorf("invalid URL for %s: %s", key, providerUrl)
-			}
-			if err := a.tryConnect(chain, providerUrl, 5); err != nil {
-				return err
-			} else {
-				a.Logger.Info("connected to RPC", "chain", chain, "providerUrl", providerUrl)
 			}
 			a.Config.ProviderMap[chain] = providerUrl
 		}
@@ -83,14 +78,28 @@ func (a *App) EstablishConfig() error {
 	}
 
 	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "TB_") || strings.HasPrefix(env, "XDG_") {
-			a.Logger.Info("environment", "value", env)
+		if (strings.HasPrefix(env, "TB_") || strings.HasPrefix(env, "XDG_")) && strings.Contains(env, "=") {
+			parts := strings.Split(env, "=")
+			if len(parts) > 1 {
+				a.Logger.Info("environment", parts[0], parts[1])
+			} else {
+				a.Logger.Info("environment", parts[0], "<empty>")
+			}
+		}
+	}
+
+	for _, chain := range chains {
+		providerUrl := a.Config.ProviderMap[chain]
+		if err := a.tryConnect(chain, providerUrl, 5); err != nil {
+			return err
+		} else {
+			a.Logger.Info("test connection", "result", "okay", "chain", chain, "providerUrl", providerUrl)
 		}
 	}
 
 	configFn := filepath.Join(a.Config.ConfigPath, "trueBlocks.toml")
 	if file.FileExists(configFn) {
-		a.Logger.Info("Using existing config", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
+		a.Logger.Info("config loaded", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
 		// check to make sure the config file has all the chains
 		contents := file.AsciiFileToString(configFn)
 		for chain := range a.Config.ProviderMap {

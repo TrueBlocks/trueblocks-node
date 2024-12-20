@@ -19,16 +19,16 @@ func main() {
 
 	// Establish the configuration file
 	if err := a.EstablishConfig(); err != nil {
-		a.Logger.Error(err.Error())
+		a.Fatal(err)
 
 	} else {
-		a.Logger.Info("Starting trueBlocks-node with...", "api", a.IsOn(app.Api), "init", a.InitMode, "monitor", a.IsOn(app.Monitor))
+		a.Logger.Info("trueblocks-node", "scrape", a.State(app.Scrape), "api", a.State(app.Api), "monitor", a.State(app.Monitor), "init-mode", a.InitMode)
 
 		// Start the API server. It runs in its own goroutine.
+		var apiUrl string
 		if a.IsOn(app.Api) {
-			a.Logger.Info("Starting Api server...")
-			a.RunServer()
-			a.Logger.Info("Api server started...")
+			a.Logger.Info("start api...")
+			apiUrl, _ = a.RunServer()
 		}
 
 		// Start forever loop to scrape and (optionally) monitor the chain
@@ -36,16 +36,20 @@ func main() {
 
 		if a.IsOn(app.Scrape) {
 			wg.Add(1)
-			a.Logger.Info("Starting scraper...")
+			a.Logger.Info("start scraper...")
 			go a.RunScraper(&wg)
-			a.Logger.Info("Scraper started...")
+			a.Logger.Info("scraper started...")
 		}
 
 		if a.IsOn(app.Monitor) {
 			wg.Add(1)
-			a.Logger.Info("Starting monitors...")
+			a.Logger.Info("start monitors...")
 			go a.RunMonitor(&wg)
-			a.Logger.Info("Monitors started...")
+			a.Logger.Info("monitors started...")
+		}
+
+		if len(apiUrl) > 0 {
+			a.Logger.Info("api is runing", "apiUrl", apiUrl)
 		}
 
 		wg.Wait()

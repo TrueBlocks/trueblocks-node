@@ -1,10 +1,12 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-node/v4/config"
 )
 
@@ -96,4 +98,17 @@ func (a *App) IsOn(feature Feature) bool {
 		return a.Api == On
 	}
 	return false
+}
+
+// State returns "on" or "off" depending if the feature is on or off.
+func (a *App) State(feature Feature) string {
+	if a.IsOn(feature) {
+		return "on"
+	}
+	return "off"
+}
+
+func (a *App) Fatal(err error) {
+	fmt.Printf("Error: %s%s%s\n", colors.Red, err.Error(), colors.Off)
+	os.Exit(1)
 }
