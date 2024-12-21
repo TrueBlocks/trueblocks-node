@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/TrueBlocks/trueblocks-node/v4/app"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
 )
 
 func main() {
@@ -27,8 +28,7 @@ func main() {
 		// Start the API server. It runs in its own goroutine.
 		var apiUrl string
 		if a.IsOn(app.Api) {
-			a.Logger.Info("start api...")
-			apiUrl, _ = a.RunServer()
+			go sdk.StartApiServer(&apiUrl)
 		}
 
 		// Start forever loop to scrape and (optionally) monitor the chain
