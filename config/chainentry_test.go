@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestTmplChain(t *testing.T) {
+func TestChainDescriptors(t *testing.T) {
 	tests := []struct {
 		name           string
 		providerMap    map[string]string
@@ -91,8 +91,8 @@ func TestTmplChain(t *testing.T) {
 				ProviderMap: tt.providerMap,
 			}
 
-			// Call TmplChain and compare the output
-			output := strings.TrimSpace(config.TmplChain())
+			// Call ChainDescriptors and compare the output
+			output := strings.TrimSpace(config.ChainDescriptors())
 			expected := strings.TrimSpace(tt.expectedOutput)
 
 			if output != expected {

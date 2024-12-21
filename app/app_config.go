@@ -133,7 +133,7 @@ func (a *App) EstablishConfig() error {
 		return err
 	}
 
-	file.StringToAsciiFile(configFn, buf.String())
+	_ = file.StringToAsciiFile(configFn, buf.String())
 	a.Logger.Info("Created config file", "configFile", configFn, "nChains", len(a.Config.ProviderMap))
 
 	return nil
@@ -192,5 +192,5 @@ var configTmpl string = `[version]
   [keys.etherscan]
     apiKey = ""
 
-[chains]{{.TmplChain}}
+[chains]{{.ChainDescriptors}}
 `

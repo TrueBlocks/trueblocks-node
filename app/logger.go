@@ -12,12 +12,12 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-type CustomHandler struct {
+type customHandler struct {
 	writer io.Writer
 	level  slog.Level
 }
 
-func (h *CustomHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
 	if r.Level < h.level {
 		return nil
 	}
@@ -42,15 +42,15 @@ func (h *CustomHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *CustomHandler) Enabled(_ context.Context, level slog.Level) bool {
+func (h *customHandler) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.level
 }
 
-func (h *CustomHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *customHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return h
 }
 
-func (h *CustomHandler) WithGroup(name string) slog.Handler {
+func (h *customHandler) WithGroup(name string) slog.Handler {
 	return h
 }
 
@@ -69,7 +69,7 @@ func NewCustomLogger() (*slog.Logger, slog.Level) {
 			logLevel = slog.LevelError
 		}
 	}
-	customHandler := &CustomHandler{
+	customHandler := &customHandler{
 		writer: os.Stderr,
 		level:  logLevel,
 	}
