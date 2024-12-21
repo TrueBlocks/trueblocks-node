@@ -34,7 +34,7 @@ func (c *Config) TmplChain() string {
     "chainId": "1",
     "remoteExplorer": "https://etherscan.io",
     "symbol": "ETH"
-  },
+  }
 }
 `
 	}
