@@ -138,8 +138,13 @@ Options:
 
 Environment:
 -------------
+You MUST export the following values to the environment:
+
   TB_NODE_DATADIR:    A directory to store the indexer's data (required, created if necessary)
   TB_NODE_MAINNETRPC: A valid RPC endpoint for Ethereum mainnet (required)
+
+You MAY also export these environment variables:
+
   TB_NODE_CHAINS:     A comma-separated list of chains to index (default: "mainnet")
   TB_NODE_<CHAIN>RPC: For each CHAIN in the TB_NODE_CHAINS list, a valid RPC endpoint
                       (example: TB_NODE_SEPOLIARPC=http://localhost:8548)
