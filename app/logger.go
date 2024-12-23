@@ -31,7 +31,10 @@ func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
 	timeFormat := r.Time.Format("02-01|15:04:05.000")
 
 	// Format the message to be exactly n characters wide
-	formattedMessage := fmt.Sprintf("%-18.18s", r.Message)
+	formattedMessage := r.Message
+	if r.NumAttrs() > 0 {
+		formattedMessage = fmt.Sprintf("%-18.18s", r.Message)
+	}
 
 	logMsg := fmt.Sprintf("%4.4s[%s] %s ", levels[lev], timeFormat, formattedMessage)
 	r.Attrs(func(attr slog.Attr) bool {

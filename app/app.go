@@ -16,12 +16,15 @@ type Feature string
 const (
 	// Scrape represents the scraper feature. The scraper may not be disabled.
 	Scrape Feature = "scrape"
-	// Monitor represents the monitor feature. The monitor is Off by default. Enable
-	// it with the `--monitor on` option.
-	Monitor Feature = "monitor"
 	// Api represents the API feature. The api is On by default. Disable it
 	// with the `--api off` option.
 	Api Feature = "api"
+	// Ipfs represents the IPFS feature. The ipfs is Off by default. Turn it
+	// on with the `--ipfs on` option.
+	Ipfs Feature = "ipfs"
+	// Monitor represents the monitor feature. The monitor is Off by default. Enable
+	// it with the `--monitor on` option.
+	Monitor Feature = "monitor"
 )
 
 // InitMode is a type that represents the initialization for the Unchained Index. It
@@ -56,8 +59,10 @@ type App struct {
 	Logger   *slog.Logger
 	Config   config.Config
 	InitMode InitMode
-	Monitor  OnOff
+	Scrape   OnOff
 	Api      OnOff
+	Ipfs     OnOff
+	Monitor  OnOff
 	Sleep    int
 	BlockCnt int
 	LogLevel slog.Level
@@ -75,7 +80,9 @@ func NewApp() *App {
 		Logger:   customLogger,
 		LogLevel: logLevel,
 		Sleep:    6,
+		Scrape:   On,
 		Api:      On,
+		Ipfs:     Off,
 		Monitor:  Off,
 		InitMode: Blooms,
 		BlockCnt: blockCnt,
@@ -91,11 +98,13 @@ func NewApp() *App {
 func (a *App) IsOn(feature Feature) bool {
 	switch feature {
 	case Scrape:
-		return a.InitMode != None
-	case Monitor:
-		return a.Monitor == On
+		return a.Scrape == On
 	case Api:
 		return a.Api == On
+	case Ipfs:
+		return a.Ipfs == On
+	case Monitor:
+		return a.Monitor == On
 	}
 	return false
 }

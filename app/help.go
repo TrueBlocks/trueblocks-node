@@ -35,6 +35,18 @@ func (a *App) ParseArgs() (bool, error) {
 		return i, fmt.Errorf("%w for --init", ErrMissingArgument)
 	}
 
+	handleScrape := func(i int) (int, error) {
+		if hasValue(i) {
+			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
+				a.Scrape = mode
+				return i + 1, nil
+			} else {
+				return i, fmt.Errorf("parsing --scrape: %w", err)
+			}
+		}
+		return i, fmt.Errorf("%w for --scrape", ErrMissingArgument)
+	}
+
 	handleApi := func(i int) (int, error) {
 		if hasValue(i) {
 			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
@@ -45,6 +57,18 @@ func (a *App) ParseArgs() (bool, error) {
 			}
 		}
 		return i, fmt.Errorf("%w for --api", ErrMissingArgument)
+	}
+
+	handleIpfs := func(i int) (int, error) {
+		if hasValue(i) {
+			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
+				a.Ipfs = mode
+				return i + 1, nil
+			} else {
+				return i, fmt.Errorf("parsing --ipfs: %w", err)
+			}
+		}
+		return i, fmt.Errorf("%w for --ipfs", ErrMissingArgument)
 	}
 
 	handleMonitor := func(i int) (int, error) {
@@ -77,8 +101,12 @@ func (a *App) ParseArgs() (bool, error) {
 		switch arg {
 		case "--init":
 			i, err = handleInit(i)
+		case "--scrape":
+			i, err = handleScrape(i)
 		case "--api":
 			i, err = handleApi(i)
+		case "--ipfs":
+			i, err = handleIpfs(i)
 		case "--monitor":
 			i, err = handleMonitor(i)
 		case "--sleep":
@@ -130,7 +158,9 @@ const helpText = `Usage: trueblocks-node <options>
 Options:
 ---------
  --init     [all*|blooms|none]   download from the unchained index smart contract (default: all)
+ --scrape   [on*|off]            enable/disable the Unchained Index scraper (default: off)
  --api      [on*|off]            enable/disable API server (default: on)
+ --ipfs     [on*|off]            enable/disable IPFS daemon (default: off)
  --monitor  [on|off*]            enable/disable address monitoring (currently disabled, default: off)
  --sleep    int                  the number of seconds to sleep between updates (default: 30)
  --version                       display the version string

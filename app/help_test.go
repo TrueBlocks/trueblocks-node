@@ -12,10 +12,13 @@ func TestParseArgs(t *testing.T) {
 		expectBool bool
 		expectErr  string
 		initMode   InitMode
+		scrape     OnOff
 		api        OnOff
+		ipfs       OnOff
 		monitor    OnOff
 		sleep      int
 	}{
+		// ------------------------------
 		{
 			name:       "No Arguments",
 			args:       []string{},
@@ -41,6 +44,29 @@ func TestParseArgs(t *testing.T) {
 			expectBool: true,
 			expectErr:  "parsing --init: invalid value for mode: invalid",
 		},
+
+		// ------------------------------
+		{
+			name:       "Valid Scrape",
+			args:       []string{"--scrape", "on"},
+			expectBool: true,
+			expectErr:  "",
+			scrape:     On,
+		},
+		{
+			name:       "Missing Scrape Argument",
+			args:       []string{"--scrape"},
+			expectBool: true,
+			expectErr:  "missing argument for --scrape",
+		},
+		{
+			name:       "Invalid Scrape Argument",
+			args:       []string{"--scrape", "invalid"},
+			expectBool: true,
+			expectErr:  "parsing --scrape: invalid value for onOff: invalid",
+		},
+
+		// ------------------------------
 		{
 			name:       "Valid API",
 			args:       []string{"--api", "on"},
@@ -60,6 +86,29 @@ func TestParseArgs(t *testing.T) {
 			expectBool: true,
 			expectErr:  "parsing --api: invalid value for onOff: invalid",
 		},
+
+		// ------------------------------
+		{
+			name:       "Valid IPFS",
+			args:       []string{"--ipfs", "on"},
+			expectBool: true,
+			expectErr:  "",
+			ipfs:       On,
+		},
+		{
+			name:       "Missing IPFS Argument",
+			args:       []string{"--ipfs"},
+			expectBool: true,
+			expectErr:  "missing argument for --ipfs",
+		},
+		{
+			name:       "Invalid IPFS Argument",
+			args:       []string{"--ipfs", "invalid"},
+			expectBool: true,
+			expectErr:  "parsing --ipfs: invalid value for onOff: invalid",
+		},
+
+		// ------------------------------
 		{
 			name:       "Valid Monitor",
 			args:       []string{"--monitor", "off"},
@@ -79,6 +128,8 @@ func TestParseArgs(t *testing.T) {
 			expectBool: true,
 			expectErr:  "parsing --monitor: invalid value for onOff: invalid",
 		},
+
+		// ------------------------------
 		{
 			name:       "Valid Sleep",
 			args:       []string{"--sleep", "60"},
@@ -98,6 +149,8 @@ func TestParseArgs(t *testing.T) {
 			expectBool: true,
 			expectErr:  "parsing --sleep: invalid value for sleep: invalid",
 		},
+
+		// ------------------------------
 		{
 			name:       "Version Flag",
 			args:       []string{"--version"},
@@ -108,7 +161,7 @@ func TestParseArgs(t *testing.T) {
 			name:       "Help Flag",
 			args:       []string{"--help"},
 			expectBool: false,
-			expectErr:  "", // helpText,
+			expectErr:  "",
 		},
 		{
 			name:       "Unknown Flag",
@@ -136,8 +189,16 @@ func TestParseArgs(t *testing.T) {
 				t.Errorf("expected InitMode %v, got %v", tt.initMode, app.InitMode)
 			}
 
+			if tt.scrape != "" && app.Scrape != tt.scrape {
+				t.Errorf("expected Scraper %v, got %v", tt.scrape, app.Scrape)
+			}
+
 			if tt.api != "" && app.Api != tt.api {
 				t.Errorf("expected Api %v, got %v", tt.api, app.Api)
+			}
+
+			if tt.ipfs != "" && app.Ipfs != tt.ipfs {
+				t.Errorf("expected Ipfs %v, got %v", tt.ipfs, app.Ipfs)
 			}
 
 			if tt.monitor != "" && app.Monitor != tt.monitor {

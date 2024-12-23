@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"sync"
+	"os/signal"
 
 	"github.com/TrueBlocks/trueblocks-node/v4/app"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
+	"github.com/TrueBlocks/trueblocks-sdk/v4/services"
 )
 
 func main() {
@@ -18,40 +18,74 @@ func main() {
 		return
 	}
 
-	// Establish the configuration file
 	if err := a.EstablishConfig(); err != nil {
 		a.Fatal(err)
-
 	} else {
-		a.Logger.Info("trueblocks-node", "scrape", a.State(app.Scrape), "api", a.State(app.Api), "monitor", a.State(app.Monitor), "init-mode", a.InitMode)
+		a.Logger.Info("trueblocks-node", "scrape", a.State(app.Scrape), "api", a.State(app.Api), "ipfs", a.State(app.Ipfs), "monitor", a.State(app.Monitor), "init-mode", a.InitMode)
 
-		// Start the API server. It runs in its own goroutine.
-		var apiUrl string
-		if a.IsOn(app.Api) {
-			go sdk.StartApiServer(&apiUrl)
+		cleanupChan := make(chan string, 4)
+		stopChan := make(chan os.Signal, 1)
+		signal.Notify(stopChan, os.Interrupt)
+
+		runningServices := 0
+		if a.IsOn(app.Scrape) {
+			runningServices++
+			go func() {
+				a.Logger.Info("scraper started...")
+				a.RunScraper(nil)
+				a.Logger.Info("scraper cleanup completed")
+				cleanupChan <- "scraper"
+			}()
 		}
 
-		// Start forever loop to scrape and (optionally) monitor the chain
-		wg := sync.WaitGroup{}
+		if a.IsOn(app.Api) {
+			runningServices++
+			apiSvc := services.NewApiService(a.Logger)
+			go func() {
+				services.StartService(apiSvc)
+				cleanupChan <- apiSvc.Name()
+			}()
+			a.Logger.Info(
+				"api is running",
+				"apiUrl", apiSvc.ApiUrl(),
+			)
+		}
 
-		if a.IsOn(app.Scrape) {
-			wg.Add(1)
-			a.Logger.Info("start scraper...")
-			go a.RunScraper(&wg)
-			a.Logger.Info("scraper started...")
+		if a.IsOn(app.Ipfs) {
+			runningServices++
+			ipfsSvc := services.NewIpfsService(a.Logger)
+			go func() {
+				services.StartService(ipfsSvc)
+				cleanupChan <- ipfsSvc.Name()
+			}()
+			a.Logger.Info(
+				"ipfs daemon is running",
+				"apiPort", ipfsSvc.ApiPort(),
+				"apiMultiaddr", ipfsSvc.ApiMultiaddr(),
+				"wasRunning", ipfsSvc.WasRunning(),
+			)
 		}
 
 		if a.IsOn(app.Monitor) {
-			wg.Add(1)
-			a.Logger.Info("start monitors...")
-			go a.RunMonitor(&wg)
-			a.Logger.Info("monitors started...")
+			runningServices++
+			monSvc := services.NewMonitorService(a.Logger)
+			go func() {
+				services.StartService(monSvc)
+				cleanupChan <- monSvc.Name()
+			}()
+			a.Logger.Info(
+				"monitors are running",
+			)
 		}
 
-		if len(apiUrl) > 0 {
-			a.Logger.Info("api is runing", "apiUrl", apiUrl)
+		<-stopChan
+		// a.Logger.Info("received Control+C, waiting for all services to clean up...")
+
+		for i := 0; i < runningServices; i++ {
+			<-cleanupChan
+			// a.Logger.Info("service cleanup complete", "service", serviceName)
 		}
 
-		wg.Wait()
+		// a.Logger.Info("all services cleaned up, exiting.")
 	}
 }
