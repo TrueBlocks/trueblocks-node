@@ -42,7 +42,7 @@ func main() {
 			runningServices++
 			apiSvc := services.NewApiService(a.Logger)
 			go func() {
-				services.StartService(apiSvc)
+				services.StartService(apiSvc, nil)
 				cleanupChan <- apiSvc.Name()
 			}()
 			a.Logger.Info(
@@ -55,7 +55,7 @@ func main() {
 			runningServices++
 			ipfsSvc := services.NewIpfsService(a.Logger)
 			go func() {
-				services.StartService(ipfsSvc)
+				services.StartService(ipfsSvc, nil)
 				cleanupChan <- ipfsSvc.Name()
 			}()
 			a.Logger.Info(
@@ -70,7 +70,7 @@ func main() {
 			runningServices++
 			monSvc := services.NewMonitorService(a.Logger)
 			go func() {
-				services.StartService(monSvc)
+				services.StartService(monSvc, nil)
 				cleanupChan <- monSvc.Name()
 			}()
 			a.Logger.Info(
