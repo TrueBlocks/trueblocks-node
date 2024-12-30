@@ -33,7 +33,7 @@ func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Format the message to be exactly n characters wide
 	formattedMessage := r.Message
 	if r.NumAttrs() > 0 {
-		formattedMessage = fmt.Sprintf("%-18.18s", r.Message)
+		formattedMessage = fmt.Sprintf("%-25.25s", r.Message)
 	}
 
 	logMsg := fmt.Sprintf("%4.4s[%s] %s ", levels[lev], timeFormat, formattedMessage)
