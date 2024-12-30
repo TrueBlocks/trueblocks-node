@@ -1,51 +1,89 @@
 package app
 
 import (
-	"fmt"
 	"testing"
 )
+
+func TestSplitChainString(t *testing.T) {
+	tests := []struct {
+		input       string
+		expected    []string
+		expectError bool
+	}{
+		{"mainnet,testnet", []string{"mainnet", "testnet"}, false},
+		{"testnet , mainnet", []string{"testnet", "mainnet"}, false},
+		{"mainnet, mainnet-testnet", []string{"mainnet", "mainnet-testnet"}, false},
+		{" ,mainnet, , , ", []string{"mainnet"}, false},
+		{"mainnet@", nil, true},
+		{"@@@@", nil, true},
+		{"mainnet,test@", nil, true},
+		{"mainnet,,test!net", nil, true}, // Invalid special character
+		{"mainnet, test net", nil, true}, // Internal space in a chain
+		{"", nil, true},                  // Empty input
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			result, err := splitChainString(test.input)
+			if (err != nil) != test.expectError {
+				t.Errorf("splitChainString(%q) error = %v; want error %v", test.input, err, test.expectError)
+			}
+			if !test.expectError && !equalStringSlices(result, test.expected) {
+				t.Errorf("splitChainString(%q) = %v; want %v", test.input, result, test.expected)
+			}
+		})
+	}
+}
 
 func TestCleanChainString(t *testing.T) {
 	tests := []struct {
 		input           string
 		expectedChains  string
 		expectedTargets string
-		expectedError   bool
+		expectError     bool
 	}{
 		{"mainnet", "mainnet", "mainnet", false},
-		{"  mainnet  ", "mainnet", "mainnet", false},
-		{"gnosis#", "", "", true},
-		{"mainnet,testnet", "mainnet,testnet", "mainnet,testnet", false},
-		{"testnet , mainnet", "mainnet,testnet", "testnet,mainnet", false},
-		{"mainnet,testnet,mainnet", "mainnet,testnet", "mainnet,testnet", false},
-		{"othernet,mainnet,testnet,,othernet", "mainnet,othernet,testnet", "othernet,mainnet,testnet", false},
+		{"testnet,mainnet", "mainnet,testnet", "testnet,mainnet", false},
+		{"testnet,othernet", "mainnet,testnet,othernet", "testnet,othernet", false},
 		{" ,mainnet, , , ", "mainnet", "mainnet", false},
-		{"  ,, ", "mainnet", "", false},
-		{"mainnet-testnet_other", "mainnet,mainnet-testnet_other", "mainnet-testnet_other", false},
-		{"@invalid", "", "", true},          // Invalid due to special character
-		{"mainnet,test#net", "", "", true},  // Invalid due to special character
-		{"mainnet, test net", "", "", true}, // Invalid due to internal space within a field
-		{"mainnet,,test!net", "", "", true}, // Invalid due to special character in the field
-		{"mainnet&chain", "", "", true},     // Invalid due to special character '@'
+		{"mainnet,testnet,mainnet", "mainnet,testnet", "mainnet,testnet", false},
+		{"othernet,,testnet,mainnet", "mainnet,othernet,testnet", "othernet,testnet,mainnet", false},
+		{"gnosis#", "", "", true},
+		{"mainnet,test#net", "", "", true},
+		{"mainnet, test net", "", "", true},
+		{"mainnet,,test!net", "", "", true},
+		{"mainnet&chain", "", "", true},
 		{"_testnet", "mainnet,_testnet", "_testnet", false},
 		{"-testnet", "mainnet,-testnet", "-testnet", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			chains, targets, err := cleanChainString(tt.input)
-			fmt.Printf("[%s]-[%s]-[%s]-[%v]\n", tt.input, chains, targets, err)
-			if (err != nil) != tt.expectedError {
-				t.Errorf("cleanChainString(%q) error = %v; want error %v", tt.input, err, tt.expectedError)
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			chains, targets, err := cleanChainString(test.input)
+			if (err != nil) != test.expectError {
+				t.Errorf("cleanChainString(%q) error = %v; want error %v", test.input, err, test.expectError)
 			}
 
-			if chains != tt.expectedChains {
-				t.Errorf("cleanChainString(%q) = %q; want %q for chains", tt.input, chains, tt.expectedChains)
+			if chains != test.expectedChains {
+				t.Errorf("cleanChainString(%q) = %q; want %q for chains", test.input, chains, test.expectedChains)
 			}
 
-			if targets != tt.expectedTargets {
-				t.Errorf("cleanChainString(%q) = %q; want %q for targets", tt.input, targets, tt.expectedTargets)
+			if targets != test.expectedTargets {
+				t.Errorf("cleanChainString(%q) = %q; want %q for targets", test.input, targets, test.expectedTargets)
 			}
 		})
 	}
+}
+
+// Helper function to compare two slices of strings
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -29,6 +29,11 @@ func init() {
 
 // EstablishConfig either reads an existing configuration file or creates it if it doesn't exist.
 func (a *App) EstablishConfig() error {
+	for _, arg := range os.Args {
+		if arg == "--help" || arg == "-h" || arg == "--version" {
+			return nil
+		}
+	}
 	var ok bool
 	var err error
 	if a.Config.ConfigPath, ok = os.LookupEnv("TB_NODE_DATADIR"); !ok {

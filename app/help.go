@@ -6,6 +6,7 @@ import (
 	"os"
 
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v4"
+	"github.com/TrueBlocks/trueblocks-sdk/v4/services"
 )
 
 var (
@@ -13,11 +14,8 @@ var (
 	ErrInvalidValue    = errors.New("invalid value")
 )
 
-// ParseArgs parses the command line options and sets the app's configuration accordingly. See README.md or run trueblocks-node --help.
-func (a *App) ParseArgs() (bool, error) {
-	if len(os.Args) < 2 {
-		return true, nil
-	}
+func (a *App) ParseArgs() (bool, []services.Servicer, error) {
+	var activeServices []services.Servicer
 
 	hasValue := func(i int) bool {
 		return i+1 < len(os.Args) && os.Args[i+1][0] != '-'
@@ -35,52 +33,47 @@ func (a *App) ParseArgs() (bool, error) {
 		return i, fmt.Errorf("%w for --init", ErrMissingArgument)
 	}
 
-	handleScrape := func(i int) (int, error) {
+	handleService := func(i int, feature Feature) (int, error) {
 		if hasValue(i) {
 			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
-				a.Scrape = mode
+				switch feature {
+				case Scrape:
+					a.Scrape = mode
+					if a.IsOn(Scrape) {
+						scrapeSvc := services.NewScrapeService(
+							a.Logger,
+							string(a.InitMode),
+							a.Config.Targets,
+							a.Sleep,
+							a.BlockCnt,
+						)
+						activeServices = append(activeServices, scrapeSvc)
+					}
+				case Api:
+					a.Api = mode
+					if a.IsOn(Api) {
+						apiSvc := services.NewApiService(a.Logger)
+						activeServices = append(activeServices, apiSvc)
+					}
+				case Ipfs:
+					a.Ipfs = mode
+					if a.IsOn(Ipfs) {
+						ipfsSvc := services.NewIpfsService(a.Logger)
+						activeServices = append(activeServices, ipfsSvc)
+					}
+				case Monitor:
+					a.Monitor = mode
+					if a.IsOn(Monitor) {
+						monSvc := services.NewMonitorService(a.Logger)
+						activeServices = append(activeServices, monSvc)
+					}
+				}
 				return i + 1, nil
 			} else {
-				return i, fmt.Errorf("parsing --scrape: %w", err)
+				return i, fmt.Errorf("parsing --%s: %w", feature.String(), err)
 			}
 		}
-		return i, fmt.Errorf("%w for --scrape", ErrMissingArgument)
-	}
-
-	handleApi := func(i int) (int, error) {
-		if hasValue(i) {
-			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
-				a.Api = mode
-				return i + 1, nil
-			} else {
-				return i, fmt.Errorf("parsing --api: %w", err)
-			}
-		}
-		return i, fmt.Errorf("%w for --api", ErrMissingArgument)
-	}
-
-	handleIpfs := func(i int) (int, error) {
-		if hasValue(i) {
-			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
-				a.Ipfs = mode
-				return i + 1, nil
-			} else {
-				return i, fmt.Errorf("parsing --ipfs: %w", err)
-			}
-		}
-		return i, fmt.Errorf("%w for --ipfs", ErrMissingArgument)
-	}
-
-	handleMonitor := func(i int) (int, error) {
-		if hasValue(i) {
-			if mode, err := validateOnOff(os.Args[i+1]); err == nil {
-				a.Monitor = mode
-				return i + 1, nil
-			} else {
-				return i, fmt.Errorf("parsing --monitor: %w", err)
-			}
-		}
-		return i, fmt.Errorf("%w for --monitor", ErrMissingArgument)
+		return i, fmt.Errorf("%w for --%s", ErrMissingArgument, feature.String())
 	}
 
 	handleSleep := func(i int) (int, error) {
@@ -95,37 +88,56 @@ func (a *App) ParseArgs() (bool, error) {
 		return i, fmt.Errorf("%w for --sleep", ErrMissingArgument)
 	}
 
+	a.Logger.Debug("Parsing command line arguments", "args", os.Args)
+
 	for i := 1; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		var err error
 		switch arg {
+		case "--scrape":
+			if i, err = handleService(i, Scrape); err != nil {
+				return true, nil, err
+			}
+		case "--api":
+			if i, err = handleService(i, Api); err != nil {
+				return true, nil, err
+			}
+		case "--ipfs":
+			if i, err = handleService(i, Ipfs); err != nil {
+				return true, nil, err
+			}
+		case "--monitor":
+			if i, err = handleService(i, Monitor); err != nil {
+				return true, nil, err
+			}
 		case "--init":
 			i, err = handleInit(i)
-		case "--scrape":
-			i, err = handleScrape(i)
-		case "--api":
-			i, err = handleApi(i)
-		case "--ipfs":
-			i, err = handleIpfs(i)
-		case "--monitor":
-			i, err = handleMonitor(i)
 		case "--sleep":
 			i, err = handleSleep(i)
 		case "--version":
-			a.Logger.Info("trueblocks-node " + sdk.Version())
-			return false, nil
+			fmt.Println("trueblocks-node " + sdk.Version())
+			return false, nil, nil
 		default:
 			if arg != "--help" {
-				return true, fmt.Errorf("unknown option:%s\n%s", os.Args[i], helpText)
+				return true, nil, fmt.Errorf("unknown option:%s\n%s", os.Args[i], helpText)
 			}
 			fmt.Printf("%s\n", helpText)
-			return false, nil
+			return false, nil, nil
 		}
 		if err != nil {
-			return true, err
+			return true, nil, err
 		}
 	}
-	return true, nil
+
+	if len(activeServices) == 0 && os.Getenv("TEST_MODE") != "true" {
+		return true, nil, fmt.Errorf("you must enable at least one of the services\n%s", helpText)
+	}
+
+	controlService := services.NewControlService(a.Logger)
+	activeServices = append([]services.Servicer{controlService}, activeServices...)
+
+	a.Logger.Debug("Command line parsing complete", "services", len(activeServices))
+	return true, activeServices, nil
 }
 
 func validateEnum[T ~string](value T, validOptions []T, name string) (T, error) {
@@ -157,14 +169,18 @@ const helpText = `Usage: trueblocks-node <options>
 
 Options:
 ---------
- --init     [all*|blooms|none]   download from the unchained index smart contract (default: all)
- --scrape   [on*|off]            enable/disable the Unchained Index scraper (default: off)
- --api      [on*|off]            enable/disable API server (default: on)
- --ipfs     [on*|off]            enable/disable IPFS daemon (default: off)
+ --init     [all|blooms|none*]   download from the unchained index smart contract (default: none)
+ --scrape   [on|off*]            enable/disable the Unchained Index scraper (default: off)
+ --api      [on|off*]            enable/disable API server (default: off)
+ --ipfs     [on|off*]            enable/disable IPFS daemon (default: off)
  --monitor  [on|off*]            enable/disable address monitoring (currently disabled, default: off)
  --sleep    int                  the number of seconds to sleep between updates (default: 30)
  --version                       display the version string
  --help                          display this help text
+
+Notes:
+-------
+If --scrape is on, --init must be either blooms or all. If you choose --all, you must always choose --all.
 
 Environment:
 -------------

@@ -13,6 +13,10 @@ import (
 // Feature is a type that represents the features of the app
 type Feature string
 
+func (f Feature) String() string {
+	return string(f)
+}
+
 const (
 	// Scrape represents the scraper feature. The scraper may not be disabled.
 	Scrape Feature = "scrape"
@@ -80,8 +84,8 @@ func NewApp() *App {
 		Logger:   customLogger,
 		LogLevel: logLevel,
 		Sleep:    6,
-		Scrape:   On,
-		Api:      On,
+		Scrape:   Off,
+		Api:      Off,
 		Ipfs:     Off,
 		Monitor:  Off,
 		InitMode: Blooms,

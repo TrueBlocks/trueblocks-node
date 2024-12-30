@@ -7,53 +7,70 @@ import (
 	"unicode"
 )
 
-// isValidChainString return false if the environment variable contains anything other then
-// alphanumeric characters or comma, colon, parens, periods, or dashes
-func isValidString(input string) bool {
-	if strings.Contains(input, "@") {
-		return false
-	}
-	regex := regexp.MustCompile(`^[a-zA-Z0-9,-_ ]+$`)
-	return regex.MatchString(input)
-}
+var (
+	ErrInternalWhitespace = fmt.Errorf("invalid chain string: internal whitespace in part")
+	ErrInvalidCharacter   = fmt.Errorf("invalid chain string: invalid character in part")
+	ErrEmptyResult        = fmt.Errorf("invalid chain string: no valid chains found")
+)
 
-// splitChainString first validates the chain string then splits it at the commas and trims each item.
+// splitChainString validates and processes a comma-separated string of chains.
+// - Trims leading/trailing whitespace from each chain.
+// - Ensures no internal whitespace within each chain.
+// - Validates that each chain contains only alphanumeric characters, dashes, and underscores.
+// - Removes duplicates while preserving order.
+// Returns a slice of valid chains or an error if validation fails.
 func splitChainString(input string) ([]string, error) {
-	if ok := isValidString(input); !ok {
-		return nil, fmt.Errorf("invalid chain string: %s", input)
-	}
+	validChainRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 	parts := strings.Split(input, ",")
 	var cleanedParts []string
-	var haveMap = map[string]bool{}
+	haveMap := map[string]bool{}
+
 	for _, part := range parts {
 		trimmedPart := strings.TrimSpace(part)
+		if len(trimmedPart) == 0 {
+			continue
+		}
 		for _, r := range trimmedPart {
 			if unicode.IsSpace(r) {
-				return nil, fmt.Errorf("invalid chain string: part contains whitespace: %s", part)
+				return nil, fmt.Errorf("%w: '%s'", ErrInternalWhitespace, trimmedPart)
 			}
 		}
-		if len(trimmedPart) > 0 && !haveMap[trimmedPart] {
+		if !validChainRegex.MatchString(trimmedPart) {
+			return nil, fmt.Errorf("%w: '%s'", ErrInvalidCharacter, trimmedPart)
+		}
+		if !haveMap[trimmedPart] {
 			cleanedParts = append(cleanedParts, trimmedPart)
 			haveMap[trimmedPart] = true
 		}
 	}
 
+	if len(cleanedParts) == 0 {
+		return nil, ErrEmptyResult
+	}
+
 	return cleanedParts, nil
 }
 
-// cleanChainString cleans up the chainStr...no spaces, move 'mainnet' to the front, add it if needed.
+// cleanChainString processes and ensures the correctness of a chain string.
+//   - Uses splitChainString to validate and clean the input.
+//   - Guarantees that "mainnet" appears at the front of the returned `chains` string,
+//     appending it if not already included.
+//   - The `chains` string includes all valid, deduplicated chains starting with "mainnet".
+//   - The `targets` string preserves the validated input order of chains.
 func cleanChainString(input string) (string, string, error) {
-	if cleaned, err := splitChainString(input); err != nil {
-		return "", "", err
-	} else {
-		chains := []string{"mainnet"}
-		for _, chain := range cleaned {
-			if chain == "mainnet" {
-				continue
-			}
-			chains = append(chains, chain)
-		}
-		return strings.Join(chains, ","), strings.Join(cleaned, ","), nil
+	targets, err := splitChainString(input)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid chain string: %v", err)
 	}
+
+	chainStrs := []string{"mainnet"}
+
+	for _, chain := range targets {
+		if chain != "mainnet" {
+			chainStrs = append(chainStrs, chain)
+		}
+	}
+
+	return strings.Join(chainStrs, ","), strings.Join(targets, ","), nil
 }

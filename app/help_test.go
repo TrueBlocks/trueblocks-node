@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -171,11 +172,13 @@ func TestParseArgs(t *testing.T) {
 		},
 	}
 
+	os.Setenv("TEST_MODE", "true")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := NewApp()
 			os.Args = append([]string{"test"}, tt.args...)
-			resultBool, err := app.ParseArgs()
+			resultBool, _, err := app.ParseArgs()
+			fmt.Println(tt.name, tt.args, resultBool, err)
 
 			if resultBool != tt.expectBool {
 				t.Errorf("expected %v, got %v", tt.expectBool, resultBool)

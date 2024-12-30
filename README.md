@@ -1,8 +1,24 @@
-# trueblocks-node
 
-A minimal indexing/monitoring trueblocks node.
+# TrueBlocks Node
 
-## Installation
+TrueBlocks Node is a powerful tool for indexing and managing Ethereum and EVM-compatible blockchain data. It enables efficient data retrieval and monitoring by indexing blockchain transactions, providing a REST API, and supporting multiple features like IPFS integration, address monitoring, and more.
+
+## Key Features
+
+- **Blockchain Indexing**: Actively indexes EVM-compatible blockchains based on user configuration.
+- **Unchained Index**: Pins portions of the Unchained Index to IPFS and publishes its manifest hash to a smart contract.
+- **REST API**: Exposes the full functionality of the TrueBlocks `chifra` toolset via a REST API.
+- **Address Monitoring**: Allows tracking transactions for specific addresses.
+- **Highly Configurable**: Customizable chains, RPC endpoints, and runtime behavior.
+
+## Documentation
+
+For complete details on using and configuring TrueBlocks Node, refer to the following documents (located in the same directory as this `README.md`):
+
+- [**User's Manual**](./UsersManual.md): Step-by-step instructions on installation, configuration, and basic usage.
+- [**Technical Specification**](./TechnicalSpecification.md): Detailed technical documentation for developers and advanced users.
+
+## Installation without verification
 
 ```bash
 go install github.com/TrueBlocks/trueblocks-node/v4@latest
@@ -10,55 +26,129 @@ go install github.com/TrueBlocks/trueblocks-node/v4@latest
 
 This will install the `trueblocks-node` binary in your `GOBIN` directory which is likely in your `$PATH`.
 
-## Testing
+## Getting Started
+
+### Prerequisites
+
+1. **System Requirements**:
+   - Operating system: Linux or macOS
+   - Golang: Version 1.19 or later
+   - Internet connectivity for blockchain data synchronization
+
+2. **Dependencies**:
+   - A valid RPC endpoint for the Ethereum mainnet is mandatory.
+   - Additional RPC endpoints for other chains (e.g., Sepolia, Gnosis) as required.
+
+3. **Environment Setup**:
+   - Create a `.env` file in the working directory. You can use the provided `env.example` file as a reference.
+
+### Installation
+
+1. **Clone the Repository**:
+   
+   ```bash
+   git clone https://github.com/TrueBlocks/trueblocks-node.git
+   cd trueblocks-node
+   ```
+
+2. **Build the Application**:
+   Ensure that Go is installed, then run:
+   
+   ```bash
+   go build -o trueblocks-node .
+   ```
+
+3. **Environment Configuration**:
+   Create a `.env` file in the directory where you will run the application. Populate it as follows:
+   
+   ```env
+   # Data directory for storing blockchain data
+   TB_NODE_DATADIR="PWD/data"
+
+   # Comma-separated list of chains to index (default: mainnet)
+   TB_NODE_CHAINS="mainnet,sepolia"
+
+   # RPC providers for each chain
+   TB_NODE_MAINNETRPC="https://mainnet.infura.io/v3/<your-api-key>"
+   TB_NODE_SEPOLIARPC="https://sepolia.infura.io/v3/<your-api-key>"
+
+   # Logging level (Options: Debug, Info, Warn, Error)
+   TB_LOGLEVEL="Info"
+   ```
+
+## Usage
+
+### Running the Application
+
+Execute the binary with the desired configuration:
 
 ```bash
-trueblocks-node --version
+./trueblocks-node <options>
 ```
 
-If this doesn't work, check your `$PATH`. No, we won't explain what this means. Google it.
+### Command-Line Options
 
-## Running
+| Option      | Description                                                          | Default |
+| ----------- | -------------------------------------------------------------------- | ------- |
+| `--init`    | Initialize the Unchained Index. Options: `all`, `blooms`, or `none`. | `none`  |
+| `--scrape`  | Enable or disable the scraper. Options: `on`, `off`.                 | `off`   |
+| `--api`     | Enable or disable the REST API. Options: `on`, `off`.                | `off`   |
+| `--ipfs`    | Enable or disable IPFS. Options: `on`, `off`.                        | `off`   |
+| `--monitor` | Enable or disable address monitoring. Options: `on`, `off`.          | `off`   |
+| `--sleep`   | Time in seconds between updates when scraping.                       | `30`    |
+| `--version` | Display the current version of TrueBlocks Node.                      |         |
+| `--help`    | Display the help text with all available options.                    |         |
 
-The easiest way to run this code is to copy `env.example` to `.env` in this folder and edit the values to match your system.
+### Example Command
 
-Then run:
+To index mainnet and enable the API:
 
 ```bash
-trueblocks-node
+./trueblocks-node --init all --scrape on --api on
 ```
 
-If you'd rather not do that for whatever reason, try this...
+## Configuration
 
-### Alternative
+### Required Environment Variables
 
-Export two values in the environment and then run the binary:
+- `TB_NODE_DATADIR`: Path to the data directory where blockchain data is stored.
+- `TB_NODE_MAINNETRPC`: A valid Ethereum mainnet RPC endpoint.
 
+### Optional Environment Variables
+
+- `TB_NODE_CHAINS`: Comma-separated list of chains to index. Example: `mainnet,sepolia`.
+- `TB_NODE_<CHAIN>RPC`: RPC endpoints for each chain (e.g., `TB_NODE_SEPOLIARPC` for Sepolia).
+- `TB_LOGLEVEL`: Logging level for the application.
+
+## Development and Testing
+
+### Testing
+
+Run unit tests using the following command:
 ```bash
-export TB_NODE_DATADIR=<your-datadir>
-export TB_NODE_MAINNETRPC=<your-rpc-provider>
-trueblocks-node
+go test ./...
 ```
 
-These two values are required (even if you're indexing other chains).
+### Development Workflow
 
-For `TB_NODE_DATADIR`, you may use special values for `PWD`, `~`, and `HOME` which are replaced with the obvious values.
+- All configurations and templates are located in the `config` package.
+- The application logic is in the `app` package.
+- Testing covers edge cases and expected inputs, particularly for chain validation, configuration parsing, and argument handling.
 
-For `TB_NODE_MAINNETRPC` use the URL of valid (and fast) RPC provider such as those available from [BlockJoy endpoints](https://www.blockjoy.com/).
+## Troubleshooting
 
-You may index other chains by exporting additional values in the environment. Please see the file called `env.example` in this folder for more information.
+1. **Missing RPC Provider**:
+   Ensure that you have defined `TB_NODE_MAINNETRPC` and any additional required RPC endpoints in your `.env` file.
 
-## Other environment variables
+2. **Configuration Errors**:
+   Run the app with `--help` to ensure your command-line arguments are correctly formatted.
 
-You may increase the logging level of the node by setting the `TB_LOGLEVEL` environment variable. Valid values are `debug`, `info`, `warn`, or `error`. The default is `info`. `debug` is the most verbose.
+3. **Logs**:
+   Logs are printed to standard output by default. Adjust the logging level using `TB_LOGLEVEL`.
 
-## Documentation
+## License
 
-The documentation includes this README.md file.
-
-Much more detailed documentation (which is derived from the source code), is [available here](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-node/v4).
-
-Internally, `trueblocks-node` uses both the [trueblocks-sdk](https://pkg.go.dev/github.com/TrueBlocks/trueblocks-sdk/v4) and [trueBlocks-core](https://trueblocks.io/chifra/introduction/). In some cases, documentation for these packages may be useful.
+This project is licensed under the MIT License. See `LICENSE` for details.
 
 ## Contributing
 
