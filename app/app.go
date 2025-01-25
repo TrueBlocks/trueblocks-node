@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-node/v4/config"
 )
@@ -75,10 +74,6 @@ type App struct {
 // NewApp creates a new App instance with the default values.
 func NewApp() *App {
 	blockCnt := 2000
-	if bc, ok := os.LookupEnv("TB_NODE_BLOCKCNT"); ok {
-		blockCnt = int(base.MustParseUint64(bc))
-	}
-
 	customLogger, logLevel := NewCustomLogger()
 	app := &App{
 		Logger:   customLogger,
